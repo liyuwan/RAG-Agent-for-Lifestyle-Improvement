@@ -15,6 +15,8 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.chains import RetrievalQA
 import firebase_admin
 from firebase_admin import credentials, firestore
+import requests
+
 
 # Initialize Firebase
 cred = credentials.Certificate("serviceAccountKey.json")  # Download this file from Firebase Console
@@ -129,8 +131,114 @@ def process_llm_response(llm_response):
 
     return final_response_with_sources
 
+# Text-to-Speech Function
+def speak_text(text):
+    try:
+        cleaned_text = text.replace('\n', ' ').strip()
+        if len(cleaned_text) > 200:
+            chunks = [cleaned_text[i:i+200] for i in range(0, len(cleaned_text), 200)]
+            for chunk in chunks:
+                tts = gTTS(text=chunk, lang='en')
+                with BytesIO() as mp3_file:
+                    tts.write_to_fp(mp3_file)
+                    mp3_file.seek(0)
+                    mixer.music.load(mp3_file)
+                    mixer.music.play()
+                    while mixer.music.get_busy():
+                        pass
+        else:
+            tts = gTTS(text=cleaned_text, lang='en')
+            with BytesIO() as mp3_file:
+                tts.write_to_fp(mp3_file)
+                mp3_file.seek(0)
+                mixer.music.load(mp3_file)
+                mixer.music.play()
+                while mixer.music.get_busy():
+                    pass
+    except Exception as e:
+        print(f"Error speaking text: {e}")
+        
+# Speech Recognition Function
+def listen_for_audio():
+    recognizer = sr.Recognizer()
+    mic = sr.Microphone()
+    recognizer.dynamic_energy_threshold = False
+    recognizer.energy_threshold = 400
+
+    with mic as source:
+        recognizer.adjust_for_ambient_noise(source, duration=0.5)
+        print("Listening for your query...")
+        audio = recognizer.listen(source, timeout=30, phrase_time_limit=30)
+    
+    try:
+        request = recognizer.recognize_google(audio, language="en-EN")
+        return request
+    except Exception as e:
+        print("Error recognizing speech:", e)
+        return None
+
+# USDA Food Database API
+
+# To check if it is necessary to call the USDA API
+def is_usda_related(query):
+    food_keywords = ['calorie', 'nutrition', 'ingredient', 'food', 'diet', 'meal', 'recipe']
+    return any(keyword in query.lower() for keyword in food_keywords)
+
+def get_usda_food_data(query):
+    try:
+        api_key = os.environ.get("USDA_API_KEY")
+        url = "https://api.nal.usda.gov/fdc/v1/foods/search"
+        params = {
+            "api_key": api_key,
+            "query": query,
+            "pageSize": 5  # Adjust the number of results as needed
+        }
+        response = requests.get(url, params=params)
+        response.raise_for_status()
+        data = response.json()
+
+        # Process the "foods" list in the response
+        if "foods" in data:
+            results = []
+            for food in data["foods"]:
+                # Handle possible missing fields with .get()
+                description = food.get("description", "N/A")
+                brand = food.get("brandOwner", "N/A")  # Note: Updated from 'brandName' to 'brandOwner'
+                ingredients = food.get("ingredients", "N/A")
+                
+                # Extract calories from "foodNutrients" (list of dicts)
+                nutrients = food.get("foodNutrients", [])
+                calories = next(
+                    (nutrient["value"] for nutrient in nutrients if nutrient.get("nutrientName") == "Energy"), 
+                    "N/A"
+                )
+
+                # Append the processed food item to results
+                results.append({
+                    "description": description,
+                    "brand": brand,
+                    "ingredients": ingredients,
+                    "calories": calories
+                })
+            return results
+        else:
+            print("No 'foods' field found in the response.")
+            return []
+    except Exception as e:
+        print(f"Error fetching USDA data: {e}")
+        return []
+
+
+#EDAMAM MEAL PLANNER API
+
+edamam_app_id = os.getenv("EDAMAM_APP_ID")
+edamam_api_key = os.getenv("EDAMAM_API_KEY")
+
+
+
+# ---------------------------- Main Method ----------------------------
 # RAG Agent Function
-# New Method: Answer Questions Without Sources
+
 def call_rag_agent(query, userId):  
     
     #Get knowledge base
@@ -155,11 +263,28 @@ def call_rag_agent(query, userId):
     conversation_history = memory.get_history()
 
     custom_prompt = (
-        "You are an AI lfestyle improvement assistant with expertise in dietary recommendations and workout planning. "
-        "Answer user queries concisely, providing evidence-based insights. "
+        "You are a personalized AI assistant specializing in nutrition and fitness. "
+        "Use the provided user-specific biometric data and context to create tailored meal and workout plans. "
+        "Avoid generic advice and focus on the user's individual needs. "
         "Keep the answers brief, with a maximum of 6 lines. "
         "Avoid speculative statements."
     )
+    
+    # Fetch USDA data
+    if is_usda_related(query):
+        usda_results = get_usda_food_data(query)
+        if usda_results:
+            usda_info = "\nUSDA Food Data:\n"
+            for food in usda_results:
+                usda_info += (
+                    f"- {food['description']} (Brand: {food['brand']})\n"
+                    f"  Ingredients: {food['ingredients']}\n"
+                    f"  Calories: {food['calories']} kcal\n"
+                )
+        else:
+            usda_info = "No relevant USDA food data found.\n"
+    else:
+        usda_info = "USDA data not retrieved for this query.\n"
     
     #Get user biometric data
     biometric_data = get_user_biometric_data(userId)
@@ -181,6 +306,7 @@ def call_rag_agent(query, userId):
     prompt = (
         f"{custom_prompt}\n"
         f"{context_info}\n"
+        f"{usda_info}\n"
         f"{biometric_info}\n"
         f"Previous Conversation:\n{conversation_history}\n"
         f"User Query: {query}\nAI:"
@@ -193,6 +319,11 @@ def call_rag_agent(query, userId):
     memory.append_to_history(query, final_response)
 
     return final_response
+
+
+
+
+
 
 """
 def call_rag_agent_with_sources(query):
@@ -245,49 +376,3 @@ def call_rag_agent_with_sources(query):
 
     return final_response
 """ 
-
-# Text-to-Speech Function
-def speak_text(text):
-    try:
-        cleaned_text = text.replace('\n', ' ').strip()
-        if len(cleaned_text) > 200:
-            chunks = [cleaned_text[i:i+200] for i in range(0, len(cleaned_text), 200)]
-            for chunk in chunks:
-                tts = gTTS(text=chunk, lang='en')
-                with BytesIO() as mp3_file:
-                    tts.write_to_fp(mp3_file)
-                    mp3_file.seek(0)
-                    mixer.music.load(mp3_file)
-                    mixer.music.play()
-                    while mixer.music.get_busy():
-                        pass
-        else:
-            tts = gTTS(text=cleaned_text, lang='en')
-            with BytesIO() as mp3_file:
-                tts.write_to_fp(mp3_file)
-                mp3_file.seek(0)
-                mixer.music.load(mp3_file)
-                mixer.music.play()
-                while mixer.music.get_busy():
-                    pass
-    except Exception as e:
-        print(f"Error speaking text: {e}")
-        
-# Speech Recognition Function
-def listen_for_audio():
-    recognizer = sr.Recognizer()
-    mic = sr.Microphone()
-    recognizer.dynamic_energy_threshold = False
-    recognizer.energy_threshold = 400
-
-    with mic as source:
-        recognizer.adjust_for_ambient_noise(source, duration=0.5)
-        print("Listening for your query...")
-        audio = recognizer.listen(source, timeout=30, phrase_time_limit=30)
-    
-    try:
-        request = recognizer.recognize_google(audio, language="en-EN")
-        return request
-    except Exception as e:
-        print("Error recognizing speech:", e)
-        return None
