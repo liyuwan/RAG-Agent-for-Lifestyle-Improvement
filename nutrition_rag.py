@@ -231,9 +231,70 @@ def get_usda_food_data(query):
 
 #EDAMAM MEAL PLANNER API
 
+# Function to classify if the query is related to meal planning or nutrition
+def is_meal_related(query):
+    meal_keywords = ['meal plan', 'food plan', 'diet plan', 'recipe', 'nutrition', 'calorie', 'eat', 'cook', 'dish', 'plan']
+    return any(keyword in query.lower() for keyword in meal_keywords)
+
+
 edamam_app_id = os.getenv("EDAMAM_APP_ID")
 edamam_api_key = os.getenv("EDAMAM_API_KEY")
 
+# Function to get Edamam meal plan (with caching)
+def get_edamam_meal_plan(calories, diet=None, health_labels=None):
+    try:
+        url = "https://api.edamam.com/api/meal-planner/v1"
+        params = {
+            "type": "public",
+            "app_id": edamam_app_id,
+            "app_key": edamam_api_key,
+            "calories": calories,
+            "random": "true",  # Get random recipes
+            "field": ["label", "url", "calories", "ingredientLines", "totalNutrients"]
+        }
+        
+        if diet:
+            params["diet"] = diet
+        if health_labels:
+            params["health"] = health_labels
+        
+        response = requests.get(url, params=params)
+        response.raise_for_status()
+        data = response.json()
+        
+        if "hits" in data:
+            meal_plan = []
+            for hit in data["hits"][:5]:  # Limit to top 5 recipes
+                recipe = hit["recipe"]
+                meal_plan.append({
+                    "label": recipe.get("label", "N/A"),
+                    "url": recipe.get("url", "N/A"),
+                    "calories": recipe.get("calories", "N/A"),
+                    "ingredients": recipe.get("ingredientLines", "N/A"),
+                    "nutrients": recipe.get("totalNutrients", "N/A")
+                })
+            return meal_plan
+        else:
+            print("No 'hits' field found in the response.")
+            return []
+    except Exception as e:
+        print(f"Error fetching Edamam meal plan: {e}")
+        return []
+
+# Cache for meal plans (to avoid redundant API calls)
+meal_plan_cache = {}
+
+# Function to get cached or fresh meal plan
+def get_cached_meal_plan(user_id, calories, diet=None, health_labels=None):
+    cache_key = f"{user_id}_{calories}_{diet}_{health_labels}"
+    if cache_key in meal_plan_cache:
+        print("Returning cached meal plan.")
+        return meal_plan_cache[cache_key]
+    
+    meal_plan = get_edamam_meal_plan(calories, diet, health_labels)
+    if meal_plan:
+        meal_plan_cache[cache_key] = meal_plan
+    return meal_plan
 
 
 # ---------------------------- Main Method ----------------------------
@@ -264,27 +325,13 @@ def call_rag_agent(query, userId):
 
     custom_prompt = (
         "You are a personalized AI assistant specializing in nutrition and fitness. "
-        "Use the provided user-specific biometric data and context to create tailored meal and workout plans. "
+        "Your task is to use the provided user-specific biometric data and context to create tailored meal and workout plans for users. "
+        "Rely only on the USDA Food Data if the query is about food or nutrition. "
+        "Rely only on the Edamam Meal Plan to generate meal plans based on the user's biometric data. "
         "Avoid generic advice and focus on the user's individual needs. "
         "Keep the answers brief, with a maximum of 6 lines. "
         "Avoid speculative statements."
     )
-    
-    # Fetch USDA data
-    if is_usda_related(query):
-        usda_results = get_usda_food_data(query)
-        if usda_results:
-            usda_info = "\nUSDA Food Data:\n"
-            for food in usda_results:
-                usda_info += (
-                    f"- {food['description']} (Brand: {food['brand']})\n"
-                    f"  Ingredients: {food['ingredients']}\n"
-                    f"  Calories: {food['calories']} kcal\n"
-                )
-        else:
-            usda_info = "No relevant USDA food data found.\n"
-    else:
-        usda_info = "USDA data not retrieved for this query.\n"
     
     #Get user biometric data
     biometric_data = get_user_biometric_data(userId)
@@ -303,11 +350,48 @@ def call_rag_agent(query, userId):
     else:
         biometric_info = "No biometric data available for this user.\n"
 
+    # Fetch USDA data
+    if is_usda_related(query):
+        usda_results = get_usda_food_data(query)
+        if usda_results:
+            usda_info = "\nUSDA Food Data:\n"
+            for food in usda_results:
+                usda_info += (
+                    f"- {food['description']} (Brand: {food['brand']})\n"
+                    f"  Ingredients: {food['ingredients']}\n"
+                    f"  Calories: {food['calories']} kcal\n"
+                )
+        else:
+            usda_info = "No relevant USDA food data found.\n"
+    else:
+        usda_info = "USDA data not retrieved for this query.\n"
+    
+    # Fetch Edamam meal plan (only if query is meal-related)
+    meal_plan_info = ""
+    if is_meal_related(query) and biometric_data and "calories_burned" in biometric_data:
+        calories = int(biometric_data["calories_burned"])
+        meal_plan = get_cached_meal_plan(userId, calories, diet="balanced", health_labels=["low-sugar", "high-protein"])
+        if meal_plan:
+            meal_plan_info = "\nEdamam Meal Plan:\n"
+            for meal in meal_plan:
+                meal_plan_info += (
+                    f"- {meal['label']}\n"
+                    f"  Calories: {meal['calories']} kcal\n"
+                    f"  Ingredients: {', '.join(meal['ingredients'])}\n"
+                    f"  Recipe URL: {meal['url']}\n"
+                )
+        else:
+            meal_plan_info = "No meal plan found.\n"
+    else:
+        meal_plan_info = "Edamam data not retrieved for this query.\n"
+    
+
     prompt = (
         f"{custom_prompt}\n"
+        f"{biometric_info}\n"
         f"{context_info}\n"
         f"{usda_info}\n"
-        f"{biometric_info}\n"
+        f"{meal_plan_info}\n"
         f"Previous Conversation:\n{conversation_history}\n"
         f"User Query: {query}\nAI:"
     )
