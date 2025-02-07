@@ -201,69 +201,6 @@ def listen_for_audio():
         print("Error recognizing speech:", e)
         return None
 
-# ---------------------- USDA API Integration Helpers ----------------------
-def is_usda_related(query):
-    food_keywords = ['calorie', 'nutrition', 'ingredient', 'food', 'diet', 'meal', 'recipe', 'protein', 'carb']
-    return any(keyword in query.lower() for keyword in food_keywords)
-
-def extract_food_keywords(query):
-    # Remove punctuation
-    translator = str.maketrans('', '', string.punctuation)
-    cleaned_query = query.translate(translator)
-    words = cleaned_query.lower().split()
-    # List of key nutrition-related words to consider
-    nutrition_keywords = [
-        'calorie', 'calories', 'nutrition', 'ingredient', 'ingredients', 'food',
-        'diet', 'meal', 'recipe', 'protein', 'carb', 'carbohydrate', 'fat', 'sugar'
-    ]
-    # Extract words that match our target keywords
-    extracted = [word for word in words if word in nutrition_keywords]
-    # Fallback: if nothing is extracted, return non-trivial words (filtering out common stopwords)
-    if not extracted:
-        stopwords = set([
-            'i', 'me', 'my', 'we', 'our', 'the', 'a', 'an', 'of', 'for', 'and',
-            'is', 'to', 'in', 'on', 'at', 'it', 'with'
-        ])
-        extracted = [word for word in words if word not in stopwords and len(word) > 2]
-    return ' '.join(extracted)
-
-def get_usda_food_data(query):
-    try:
-        api_key = os.environ.get("USDA_API_KEY")
-        url = "https://api.nal.usda.gov/fdc/v1/foods/search"
-        params = {
-            "api_key": api_key,
-            "query": query,  # Query now contains only the extracted keywords
-            "pageSize": 5
-        }
-        response = requests.get(url, params=params)
-        response.raise_for_status()
-        data = response.json()
-
-        if "foods" in data:
-            results = []
-            for food in data["foods"]:
-                description = food.get("description", "N/A")
-                brand = food.get("brandOwner", "N/A")
-                ingredients = food.get("ingredients", "N/A")
-                nutrients = food.get("foodNutrients", [])
-                calories = next(
-                    (nutrient["value"] for nutrient in nutrients if nutrient.get("nutrientName") == "Energy"),
-                    "N/A"
-                )
-                results.append({
-                    "description": description,
-                    "brand": brand,
-                    "ingredients": ingredients,
-                    "calories": calories
-                })
-            return results
-        else:
-            print("No 'foods' field found in the response.")
-            return []
-    except Exception as e:
-        print(f"Error fetching USDA data: {e}")
-        return []
 
 # ---------------------- Main RAG Agent Function ----------------------
 def call_rag_agent(query, userId):  
