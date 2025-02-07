@@ -8,22 +8,22 @@ from dotenv import load_dotenv
 from datetime import date
 import json
 import textwrap
+import string
+import requests
+import firebase_admin
+from firebase_admin import credentials, firestore
+
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 from langchain_chroma import Chroma
 from langchain_community.document_loaders import PyPDFLoader, DirectoryLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.chains import RetrievalQA
-import firebase_admin
-from firebase_admin import credentials, firestore
-import requests
 
-
-# Initialize Firebase
-cred = credentials.Certificate("serviceAccountKey.json")  # Download this file from Firebase Console
+# ---------------------- Firebase & Environment Setup ----------------------
+cred = credentials.Certificate("serviceAccountKey.json")
 firebase_admin.initialize_app(cred)
 db = firestore.client()
 
-#Get user biometric data from Firestore
 def get_user_biometric_data(user_id):
     try:
         user_doc = db.collection('users').document(user_id).get()
@@ -35,41 +35,67 @@ def get_user_biometric_data(user_id):
         print(f"Error fetching user data: {e}")
         return None
 
-# Initialize mixer for text-to-speech
 mixer.init()
 today = str(date.today())
 
-# Load environment variables
 dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
 load_dotenv(dotenv_path)
 api_key = os.environ.get("GOOGLE_API_KEY")
 genai.configure(api_key=api_key)
 
-# Vector Store Configuration
+# ---------------------- Vector Store Configuration ----------------------
+# ---------------------- Vector Store Configuration ----------------------
 persist_directory = 'db'
 vector_store_exists = os.path.exists(persist_directory)
 embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
 
-# Load or Create Vector Store
+# Load PDF Files
+loader = DirectoryLoader('Nutrition Data', glob='./*.pdf', loader_cls=PyPDFLoader)
+raw_data = loader.load()
+
+# Load JSON File
+json_file_path = "Nutrition Data/usda_food_data.json"
+
+if os.path.exists(json_file_path):
+    with open(json_file_path, "r", encoding="utf-8") as f:
+        json_data = json.load(f)
+
+    json_documents = []
+    for item in json_data:
+        text_content = f"Food: {item.get('description', 'N/A')}\n" \
+                       f"Brand: {item.get('brandOwner', 'N/A')}\n" \
+                       f"Ingredients: {item.get('ingredients', 'N/A')}\n" \
+                       f"Calories: {item.get('calories', 'N/A')} kcal\n"
+        json_documents.append(text_content)
+
+    # Convert JSON text to documents
+    json_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=0)
+    json_documents = json_splitter.create_documents(json_documents)
+else:
+    json_documents = []
+
+# Split PDF text into chunks
+text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=0)
+nutrition_data = text_splitter.split_documents(raw_data)
+
+# Combine PDF and JSON data
+all_documents = nutrition_data + json_documents
+
 if vector_store_exists:
     vectordb = Chroma(persist_directory=persist_directory, embedding_function=embeddings)
 else:
-    loader = DirectoryLoader('Nutrition Data', glob='./*.pdf', loader_cls=PyPDFLoader)
-    raw_data = loader.load()
-    
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=0)
-    nutrition_data = text_splitter.split_documents(raw_data)
-    
-    vectordb = Chroma.from_documents(documents=nutrition_data, 
-                                     embedding_function=embeddings,
-                                     persist_directory=persist_directory)
+    vectordb = Chroma.from_documents(
+        documents=all_documents,
+        embedding_function=embeddings,
+        persist_directory=persist_directory
+    )
 
-retriever = vectordb.as_retriever(search_kwargs={"k":5})
+retriever = vectordb.as_retriever(search_kwargs={"k": 5})
 
-# Initialize the LLM
+# ---------------------- Initialize LLM ----------------------
 llm = ChatGoogleGenerativeAI(model='gemini-1.5-pro', temperature=0.7)
 
-# Custom Memory Handler
+# ---------------------- Custom Memory Handler ----------------------
 class FileBasedMemory:
     def __init__(self, memory_file='chat_history.json'):
         self.memory_file = memory_file
@@ -92,10 +118,8 @@ class FileBasedMemory:
     def get_history(self):
         return '\n'.join([f"User: {entry['user']}\nBot: {entry['bot']}" for entry in self.history])
 
-# Initialize Memory
 memory = FileBasedMemory(memory_file='chat_history.json')
 
-# RetrievalQA Setup
 qa_chain = RetrievalQA.from_chain_type(
     llm=llm,
     chain_type="stuff",
@@ -103,14 +127,16 @@ qa_chain = RetrievalQA.from_chain_type(
     return_source_documents=True  # Enable source document return
 )
 
-# Helper Functions
+# ---------------------- Helper Functions ----------------------
 def wrap_text_preserve_newlines(text, width=110):
     lines = text.split('\n')
     wrapped_lines = [textwrap.fill(line, width=width) for line in lines]
     return '\n'.join(wrapped_lines).rstrip('\n')
 
 def process_llm_response(llm_response):
-    final_response = wrap_text_preserve_newlines(llm_response.get('result', 'No response generated.'))
+    final_response = wrap_text_preserve_newlines(
+        llm_response.get('result', 'No response generated.')
+    )
     
     source_info = "\n\nSources:\n"
     if 'source_documents' in llm_response and llm_response["source_documents"]:
@@ -131,7 +157,6 @@ def process_llm_response(llm_response):
 
     return final_response_with_sources
 
-# Text-to-Speech Function
 def speak_text(text):
     try:
         cleaned_text = text.replace('\n', ' ').strip()
@@ -157,8 +182,7 @@ def speak_text(text):
                     pass
     except Exception as e:
         print(f"Error speaking text: {e}")
-        
-# Speech Recognition Function
+
 def listen_for_audio():
     recognizer = sr.Recognizer()
     mic = sr.Microphone()
@@ -177,12 +201,31 @@ def listen_for_audio():
         print("Error recognizing speech:", e)
         return None
 
-# USDA Food Database API
-
-# To check if it is necessary to call the USDA API
+# ---------------------- USDA API Integration Helpers ----------------------
 def is_usda_related(query):
-    food_keywords = ['calorie', 'nutrition', 'ingredient', 'food', 'diet', 'meal', 'recipe']
+    food_keywords = ['calorie', 'nutrition', 'ingredient', 'food', 'diet', 'meal', 'recipe', 'protein', 'carb']
     return any(keyword in query.lower() for keyword in food_keywords)
+
+def extract_food_keywords(query):
+    # Remove punctuation
+    translator = str.maketrans('', '', string.punctuation)
+    cleaned_query = query.translate(translator)
+    words = cleaned_query.lower().split()
+    # List of key nutrition-related words to consider
+    nutrition_keywords = [
+        'calorie', 'calories', 'nutrition', 'ingredient', 'ingredients', 'food',
+        'diet', 'meal', 'recipe', 'protein', 'carb', 'carbohydrate', 'fat', 'sugar'
+    ]
+    # Extract words that match our target keywords
+    extracted = [word for word in words if word in nutrition_keywords]
+    # Fallback: if nothing is extracted, return non-trivial words (filtering out common stopwords)
+    if not extracted:
+        stopwords = set([
+            'i', 'me', 'my', 'we', 'our', 'the', 'a', 'an', 'of', 'for', 'and',
+            'is', 'to', 'in', 'on', 'at', 'it', 'with'
+        ])
+        extracted = [word for word in words if word not in stopwords and len(word) > 2]
+    return ' '.join(extracted)
 
 def get_usda_food_data(query):
     try:
@@ -190,30 +233,24 @@ def get_usda_food_data(query):
         url = "https://api.nal.usda.gov/fdc/v1/foods/search"
         params = {
             "api_key": api_key,
-            "query": query,
-            "pageSize": 5  # Adjust the number of results as needed
+            "query": query,  # Query now contains only the extracted keywords
+            "pageSize": 5
         }
         response = requests.get(url, params=params)
         response.raise_for_status()
         data = response.json()
 
-        # Process the "foods" list in the response
         if "foods" in data:
             results = []
             for food in data["foods"]:
-                # Handle possible missing fields with .get()
                 description = food.get("description", "N/A")
-                brand = food.get("brandOwner", "N/A")  # Note: Updated from 'brandName' to 'brandOwner'
+                brand = food.get("brandOwner", "N/A")
                 ingredients = food.get("ingredients", "N/A")
-                
-                # Extract calories from "foodNutrients" (list of dicts)
                 nutrients = food.get("foodNutrients", [])
                 calories = next(
-                    (nutrient["value"] for nutrient in nutrients if nutrient.get("nutrientName") == "Energy"), 
+                    (nutrient["value"] for nutrient in nutrients if nutrient.get("nutrientName") == "Energy"),
                     "N/A"
                 )
-
-                # Append the processed food item to results
                 results.append({
                     "description": description,
                     "brand": brand,
@@ -228,81 +265,9 @@ def get_usda_food_data(query):
         print(f"Error fetching USDA data: {e}")
         return []
 
-
-#EDAMAM MEAL PLANNER API
-
-# Function to classify if the query is related to meal planning or nutrition
-def is_meal_related(query):
-    meal_keywords = ['meal plan', 'food plan', 'diet plan', 'recipe', 'nutrition', 'calorie', 'eat', 'cook', 'dish', 'plan']
-    return any(keyword in query.lower() for keyword in meal_keywords)
-
-
-edamam_app_id = os.getenv("EDAMAM_APP_ID")
-edamam_api_key = os.getenv("EDAMAM_API_KEY")
-
-# Function to get Edamam meal plan (with caching)
-def get_edamam_meal_plan(calories, diet=None, health_labels=None):
-    try:
-        url = "https://api.edamam.com/api/meal-planner/v1"
-        params = {
-            "type": "public",
-            "app_id": edamam_app_id,
-            "app_key": edamam_api_key,
-            "calories": calories,
-            "random": "true",  # Get random recipes
-            "field": ["label", "url", "calories", "ingredientLines", "totalNutrients"]
-        }
-        
-        if diet:
-            params["diet"] = diet
-        if health_labels:
-            params["health"] = health_labels
-        
-        response = requests.get(url, params=params)
-        response.raise_for_status()
-        data = response.json()
-        
-        if "hits" in data:
-            meal_plan = []
-            for hit in data["hits"][:5]:  # Limit to top 5 recipes
-                recipe = hit["recipe"]
-                meal_plan.append({
-                    "label": recipe.get("label", "N/A"),
-                    "url": recipe.get("url", "N/A"),
-                    "calories": recipe.get("calories", "N/A"),
-                    "ingredients": recipe.get("ingredientLines", "N/A"),
-                    "nutrients": recipe.get("totalNutrients", "N/A")
-                })
-            return meal_plan
-        else:
-            print("No 'hits' field found in the response.")
-            return []
-    except Exception as e:
-        print(f"Error fetching Edamam meal plan: {e}")
-        return []
-
-# Cache for meal plans (to avoid redundant API calls)
-meal_plan_cache = {}
-
-# Function to get cached or fresh meal plan
-def get_cached_meal_plan(user_id, calories, diet=None, health_labels=None):
-    cache_key = f"{user_id}_{calories}_{diet}_{health_labels}"
-    if cache_key in meal_plan_cache:
-        print("Returning cached meal plan.")
-        return meal_plan_cache[cache_key]
-    
-    meal_plan = get_edamam_meal_plan(calories, diet, health_labels)
-    if meal_plan:
-        meal_plan_cache[cache_key] = meal_plan
-    return meal_plan
-
-
-# ---------------------------- Main Method ----------------------------
-# RAG Agent Function
-
+# ---------------------- Main RAG Agent Function ----------------------
 def call_rag_agent(query, userId):  
-    
-    #Get knowledge base
+    # Retrieve relevant documents from your nutrition PDFs
     try:
         retrieved_docs = retriever.invoke(query)
     except Exception as e:
@@ -320,26 +285,25 @@ def call_rag_agent(query, userId):
     else:
         context_info = "No relevant information found in Nutrition Data PDFs.\n"
 
-    #Get conversation history
     conversation_history = memory.get_history()
 
+    # Updated prompt instructs the LLM to generate plans using biometric data and USDA food data only.
     custom_prompt = (
         "You are a personalized AI assistant specializing in nutrition and fitness. "
         "Your task is to use the provided user-specific biometric data and context to create tailored meal and workout plans for users. "
-        "Rely only on the USDA Food Data if the query is about food or nutrition. "
-        "Rely only on the Edamam Meal Plan to generate meal plans based on the user's biometric data. "
+        "Rely on the Food Data provided for creating the plans. "
+        "Do not generate plans solely based on your own assumptions; incorporate the provided data. "
         "Avoid generic advice and focus on the user's individual needs. "
         "Keep the answers brief, with a maximum of 6 lines. "
         "Avoid speculative statements."
     )
     
-    #Get user biometric data
     biometric_data = get_user_biometric_data(userId)
     
     if biometric_data:
         biometric_info = (
             f"User's Biometric Data:\n"
-            f"- Name: {biometric_data.get('name', 'N/A')} \n"
+            f"- Name: {biometric_data.get('name', 'N/A')}\n"
             f"- Age: {biometric_data.get('age', 'N/A')} years\n"
             f"- Weight: {biometric_data.get('weight', 'N/A')} lbs\n"
             f"- Heart Rate: {biometric_data.get('heart_rate', 'N/A')} bpm\n"
@@ -350,113 +314,18 @@ def call_rag_agent(query, userId):
     else:
         biometric_info = "No biometric data available for this user.\n"
 
-    # Fetch USDA data
-    if is_usda_related(query):
-        usda_results = get_usda_food_data(query)
-        if usda_results:
-            usda_info = "\nUSDA Food Data:\n"
-            for food in usda_results:
-                usda_info += (
-                    f"- {food['description']} (Brand: {food['brand']})\n"
-                    f"  Ingredients: {food['ingredients']}\n"
-                    f"  Calories: {food['calories']} kcal\n"
-                )
-        else:
-            usda_info = "No relevant USDA food data found.\n"
-    else:
-        usda_info = "USDA data not retrieved for this query.\n"
-    
-    # Fetch Edamam meal plan (only if query is meal-related)
-    meal_plan_info = ""
-    if is_meal_related(query) and biometric_data and "calories_burned" in biometric_data:
-        calories = int(biometric_data["calories_burned"])
-        meal_plan = get_cached_meal_plan(userId, calories, diet="balanced", health_labels=["low-sugar", "high-protein"])
-        if meal_plan:
-            meal_plan_info = "\nEdamam Meal Plan:\n"
-            for meal in meal_plan:
-                meal_plan_info += (
-                    f"- {meal['label']}\n"
-                    f"  Calories: {meal['calories']} kcal\n"
-                    f"  Ingredients: {', '.join(meal['ingredients'])}\n"
-                    f"  Recipe URL: {meal['url']}\n"
-                )
-        else:
-            meal_plan_info = "No meal plan found.\n"
-    else:
-        meal_plan_info = "Edamam data not retrieved for this query.\n"
-    
-
+    # Build the prompt for the LLM
     prompt = (
         f"{custom_prompt}\n"
         f"{biometric_info}\n"
         f"{context_info}\n"
-        f"{usda_info}\n"
-        f"{meal_plan_info}\n"
         f"Previous Conversation:\n{conversation_history}\n"
         f"User Query: {query}\nAI:"
     )
 
     response = qa_chain.invoke(prompt)
 
-    # Exclude sources from the response
-    final_response = response['result'].rstrip('\n') #wrap_text_preserve_newlines(response['result'])
+    final_response = response['result'].rstrip('\n')
     memory.append_to_history(query, final_response)
 
     return final_response
-
-
-
-
-
-
-"""
-def call_rag_agent_with_sources(query):
-    try:
-        retrieved_docs = retriever.invoke(query)
-    except Exception as e:
-        print(f"Error during retrieval: {e}")
-        retrieved_docs = []
-
-    relevant_docs = []
-    for doc in retrieved_docs:
-        if query.lower() in doc.page_content.lower() or len(doc.page_content.strip()) > 50:
-            relevant_docs.append(doc)
-
-    if relevant_docs:
-        retrieved_text = "\n".join([doc.page_content for doc in relevant_docs[:3]])
-        context_info = f"Here is some information from your Nutrition Data PDFs that might help:\n{retrieved_text}\n"
-        include_sources = True
-    else:
-        context_info = "No relevant information found in Nutrition Data PDFs.\n"
-        include_sources = False
-
-    conversation_history = memory.get_history()
-
-    custom_prompt = (
-        "You are an AI nutritionist with expertise in dietary recommendations and nutritional science. "
-        "Answer user queries concisely, providing evidence-based insights. "
-        "Keep the answers brief, with a maximum of 6 lines. "
-        "Cite sources where relevant and avoid speculative statements."
-    )
-    
-    prompt = (
-        f"{custom_prompt}\n"
-        f"{context_info}\n"
-        f"Previous Conversation:\n{conversation_history}\n"
-        f"User Query: {query}\nAI:"
-    )
-
-    response = qa_chain.invoke(prompt)
-
-    final_response = wrap_text_preserve_newlines(response['result'])
-    if include_sources and 'source_documents' in response and response["source_documents"]:
-        source_info = "\n\nSources:\n"
-        for i, source in enumerate(response["source_documents"]):
-            source_name = source.metadata.get('source', 'Unknown Source')
-            source_info += f"{i + 1}. {source_name}\n"
-        final_response += source_info
-
-    memory.append_to_history(query, final_response)
-
-    return final_response
-""" 
