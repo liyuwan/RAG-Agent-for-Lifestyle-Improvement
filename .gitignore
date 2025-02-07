@@ -2,3 +2,5 @@
 serviceAccountKey.json
 __pycache__/
 *.pyc
+food database/*.csv
+Nutrition Data/usda_food_data.json
