@@ -10,14 +10,20 @@ import json
 import textwrap
 import string
 import requests
+from tqdm import tqdm
 import firebase_admin
 from firebase_admin import credentials, firestore
-
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 from langchain_chroma import Chroma
 from langchain_community.document_loaders import PyPDFLoader, DirectoryLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.chains import RetrievalQA
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.schema import Document
+from concurrent.futures import ThreadPoolExecutor
+
+
+
 
 # ---------------------- Firebase & Environment Setup ----------------------
 cred = credentials.Certificate("serviceAccountKey.json")
@@ -43,54 +49,78 @@ load_dotenv(dotenv_path)
 api_key = os.environ.get("GOOGLE_API_KEY")
 genai.configure(api_key=api_key)
 
-# ---------------------- Vector Store Configuration ----------------------
-# ---------------------- Vector Store Configuration ----------------------
+# Vector Store Configuration
+
 persist_directory = 'db'
+BATCH_SIZE = 5000  # Increase for faster embedding
 vector_store_exists = os.path.exists(persist_directory)
-embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+embeddings = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004")
 
-# Load PDF Files
-loader = DirectoryLoader('Nutrition Data', glob='./*.pdf', loader_cls=PyPDFLoader)
-raw_data = loader.load()
-
-# Load JSON File
+# File Paths
 json_file_path = "Nutrition Data/usda_food_data.json"
 
-if os.path.exists(json_file_path):
-    with open(json_file_path, "r", encoding="utf-8") as f:
-        json_data = json.load(f)
-
+# Function to process JSON data
+def process_json():
     json_documents = []
-    for item in json_data:
-        text_content = f"Food: {item.get('description', 'N/A')}\n" \
-                       f"Brand: {item.get('brandOwner', 'N/A')}\n" \
-                       f"Ingredients: {item.get('ingredients', 'N/A')}\n" \
-                       f"Calories: {item.get('calories', 'N/A')} kcal\n"
-        json_documents.append(text_content)
+    if os.path.exists(json_file_path):
+        with open(json_file_path, "r", encoding="utf-8") as f:
+            json_data = json.load(f)
+        print(f"✅ JSON file loaded successfully! Total records: {len(json_data)}")
 
-    # Convert JSON text to documents
-    json_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=0)
-    json_documents = json_splitter.create_documents(json_documents)
-else:
-    json_documents = []
+        for i, item in enumerate(json_data):
+            text_content = f"Food: {item.get('name', 'N/A')}\n"
+            if 'nutrients' in item:
+                nutrients_text = [f"{nutrient.get('name', 'N/A')}: {nutrient.get('amount', 'N/A')} {nutrient.get('unit', '')}" for nutrient in item['nutrients']]
+                text_content += "Nutrients:\n" + "\n".join(nutrients_text)
+            json_documents.append(Document(page_content=text_content, metadata={"source": "USDA"}))
 
-# Split PDF text into chunks
-text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=0)
-nutrition_data = text_splitter.split_documents(raw_data)
+            if i < 5:  # Debug print for first 5
+                print(f"🔎 JSON to Text [{i+1}]:\n{text_content}\n{'-'*40}")
 
-# Combine PDF and JSON data
-all_documents = nutrition_data + json_documents
+    return RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=20).split_documents(json_documents) if json_documents else []
 
+# Function to process PDFs
+def process_pdfs():
+    loader = DirectoryLoader('Nutrition Data', glob='./*.pdf', loader_cls=PyPDFLoader)
+    raw_data = loader.load()
+    return RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=0).split_documents(raw_data)
+
+
+# Load vector store before embedding
 if vector_store_exists:
+    print("Loading existing vector store...")
     vectordb = Chroma(persist_directory=persist_directory, embedding_function=embeddings)
+    retriever = vectordb.as_retriever(search_kwargs={"k": 5})  # Create retriever early
+    print("✅ Vector store loaded successfully!")
 else:
-    vectordb = Chroma.from_documents(
-        documents=all_documents,
-        embedding_function=embeddings,
-        persist_directory=persist_directory
+    print("Creating new vector store...")
+    vectordb = Chroma(
+        persist_directory=persist_directory,
+        embedding_function=embeddings
     )
+    # Run JSON & PDF processing in parallel
+    with ThreadPoolExecutor() as executor:
+        future_json = executor.submit(process_json)
+        future_pdfs = executor.submit(process_pdfs)
 
+    usda_data = future_json.result()
+    pdf_data = future_pdfs.result()
+
+    # Combine all documents
+    all_documents = usda_data + pdf_data
+    print(f"📄 Total Documents: {len(all_documents)}")
+
+    # Add documents in batches 
+    print("\n💾 Adding documents to vector store...")
+    for i in tqdm(range(0, len(all_documents), BATCH_SIZE), desc="Embedding"):
+        batch = all_documents[i:i + BATCH_SIZE]
+        vectordb.add_documents(batch)  
+    print("\n✅ Vector store creation completed!")
+
+
+# Create retriever
 retriever = vectordb.as_retriever(search_kwargs={"k": 5})
+
 
 # ---------------------- Initialize LLM ----------------------
 llm = ChatGoogleGenerativeAI(model='gemini-1.5-pro', temperature=0.7)
@@ -128,6 +158,7 @@ qa_chain = RetrievalQA.from_chain_type(
 )
 
 # ---------------------- Helper Functions ----------------------
+'''
 def wrap_text_preserve_newlines(text, width=110):
     lines = text.split('\n')
     wrapped_lines = [textwrap.fill(line, width=width) for line in lines]
@@ -156,6 +187,7 @@ def process_llm_response(llm_response):
     final_response_with_sources = final_response + source_info
 
     return final_response_with_sources
+'''
 
 def speak_text(text):
     try:
