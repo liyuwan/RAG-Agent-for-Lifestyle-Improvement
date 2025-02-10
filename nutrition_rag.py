@@ -54,7 +54,7 @@ genai.configure(api_key=api_key)
 persist_directory = 'db'
 BATCH_SIZE = 5000  # Increase for faster embedding
 vector_store_exists = os.path.exists(persist_directory)
-embeddings = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004")
+embeddings = GoogleGenerativeAIEmbeddings(model='models/embedding-001')
 
 # File Paths
 json_file_path = "Nutrition Data/usda_food_data.json"
@@ -118,8 +118,8 @@ else:
     print("\n✅ Vector store creation completed!")
 
 
-# Create retriever
-retriever = vectordb.as_retriever(search_kwargs={"k": 5})
+    # Create retriever
+    retriever = vectordb.as_retriever(search_kwargs={"k": 5})
 
 
 # ---------------------- Initialize LLM ----------------------
@@ -260,6 +260,7 @@ def call_rag_agent(query, userId):
     custom_prompt = (
         "You are a personalized AI assistant specializing in nutrition and fitness. "
         "Your task is to use the provided user-specific biometric data and context to create tailored meal and workout plans for users. "
+        "Do not tell users to consult a doctor or registered dietitian for personalized plans. It is your task to provide such plans. "
         "Rely on the Food Data provided for creating the plans. "
         "Do not generate plans solely based on your own assumptions; incorporate the provided data. "
         "Avoid generic advice and focus on the user's individual needs. "
