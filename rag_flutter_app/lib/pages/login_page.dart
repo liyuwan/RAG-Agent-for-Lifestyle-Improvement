@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:rag_flutter_app/pages/test_page.dart';
+import 'input_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class LoginPage extends StatefulWidget {
@@ -29,7 +29,7 @@ class _LoginPageState extends State<LoginPage> {
       // Navigate to HomeScreen if login is successful
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const HomeScreen()),
+        MaterialPageRoute(builder: (context) => const InputPage()),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
