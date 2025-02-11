@@ -125,6 +125,7 @@ else:
 # ---------------------- Initialize LLM ----------------------
 llm = ChatGoogleGenerativeAI(model='gemini-1.5-pro', temperature=0.7)
 
+'''
 # ---------------------- Custom Memory Handler ----------------------
 class FileBasedMemory:
     def __init__(self, memory_file='chat_history.json'):
@@ -147,9 +148,48 @@ class FileBasedMemory:
 
     def get_history(self):
         return '\n'.join([f"User: {entry['user']}\nBot: {entry['bot']}" for entry in self.history])
+'''
 
-memory = FileBasedMemory(memory_file='chat_history.json')
+# ---------------------- Firestore Memory ----------------------
+class FirestoreMemory:
+    def __init__(self, user_id):
+        self.user_id = user_id
+        self.history_ref = db.collection('users').document(self.user_id).collection('chat_history')
+        self.history = self.load_memory()
+        
+    def load_memory(self):
+        try:
+            history_ref = db.collection('users').document(self.user_id).collection('chat_history')
+            docs = history_ref.order_by('timestamp').stream()
+            return [{
+                'user': doc.get('user_input'),
+                'bot': doc.get('bot_response'),
+                'timestamp': doc.get('timestamp')
+            } for doc in docs]
+        except Exception as e:
+            print(f"Error loading chat history: {e}")
+            return []
 
+    def append_to_history(self, user_input, bot_response):
+        # Keep only last 20 messages
+        if len(self.history) >= 20:
+            oldest = self.history_ref.order_by('timestamp').limit(1).get()
+            for doc in oldest:
+                doc.reference.delete()
+        
+        # Add new entry
+        self.history_ref.add({
+            'user_input': user_input,
+            'bot_response': bot_response,
+            'timestamp': firestore.SERVER_TIMESTAMP
+        })
+
+    def get_history(self):
+        memory = self.load_memory()
+        return '\n'.join([f"User: {entry['user']}\nBot: {entry['bot']}" for entry in memory])
+
+
+# ---------------------- Initialize QA Chain ----------------------
 qa_chain = RetrievalQA.from_chain_type(
     llm=llm,
     chain_type="stuff",
@@ -235,6 +275,17 @@ def listen_for_audio():
 
 
 # ---------------------- Main RAG Agent Function ----------------------
+
+# Store the system prompt globally so it's not included in every request
+SYSTEM_PROMPT = """You are a personalized AI assistant specializing in nutrition and fitness. 
+Your task is to use the provided user-specific biometric data and context to create tailored meal and workout plans for users. 
+Do not tell users to consult a doctor or registered dietitian for personalized plans. It is your task to provide such plans. 
+Rely on the Food Data provided for creating the plans. 
+Do not generate plans solely based on your own assumptions; incorporate the provided data. 
+Avoid generic advice and focus on the user's individual needs. 
+Keep the answers brief, with a maximum of 6 lines. 
+Avoid speculative statements."""
+
 def call_rag_agent(query, userId):  
     # Retrieve relevant documents from your nutrition PDFs
     try:
@@ -243,59 +294,57 @@ def call_rag_agent(query, userId):
         print(f"Error during retrieval: {e}")
         retrieved_docs = []
 
-    relevant_docs = []
-    for doc in retrieved_docs:
-        if query.lower() in doc.page_content.lower() or len(doc.page_content.strip()) > 50:
-            relevant_docs.append(doc)
+    context_info = (
+        f"Here is some information from your Nutrition Data PDFs and USDA food data that might help:\n"
+        f"{' '.join([doc.page_content for doc in retrieved_docs[:3]])}\n"
+        if retrieved_docs else "No relevant information found in Nutrition Data PDFs.\n"
+    )
 
-    if relevant_docs:
-        retrieved_text = "\n".join([doc.page_content for doc in relevant_docs[:3]])
-        context_info = f"Here is some information from your Nutrition Data PDFs that might help:\n{retrieved_text}\n"
-    else:
-        context_info = "No relevant information found in Nutrition Data PDFs.\n"
-
+    # Get the conversation history from Firestore
+    memory = FirestoreMemory(userId)
+    
     conversation_history = memory.get_history()
 
-    # Updated prompt instructs the LLM to generate plans using biometric data and USDA food data only.
-    custom_prompt = (
-        "You are a personalized AI assistant specializing in nutrition and fitness. "
-        "Your task is to use the provided user-specific biometric data and context to create tailored meal and workout plans for users. "
-        "Do not tell users to consult a doctor or registered dietitian for personalized plans. It is your task to provide such plans. "
-        "Rely on the Food Data provided for creating the plans. "
-        "Do not generate plans solely based on your own assumptions; incorporate the provided data. "
-        "Avoid generic advice and focus on the user's individual needs. "
-        "Keep the answers brief, with a maximum of 6 lines. "
-        "Avoid speculative statements."
-    )
-    
+    # Fetch biometric data
     biometric_data = get_user_biometric_data(userId)
-    
     if biometric_data:
         biometric_info = (
             f"User's Biometric Data:\n"
             f"- Name: {biometric_data.get('name', 'N/A')}\n"
             f"- Age: {biometric_data.get('age', 'N/A')} years\n"
-            f"- Weight: {biometric_data.get('weight', 'N/A')} lbs\n"
-            f"- Heart Rate: {biometric_data.get('heart_rate', 'N/A')} bpm\n"
-            f"- Steps: {biometric_data.get('steps', 'N/A')}\n"
-            f"- Calories Burned: {biometric_data.get('calories_burned', 'N/A')} kcal\n"
+            f"- Height: {biometric_data.get('height', 'N/A')} cm\n"
+            f"- Weight: {biometric_data.get('weight', 'N/A')} kg\n"
+            f"- Heart Conditions: {biometric_data.get('healthConditions', 'None')}\n"
+            f"- Food Allergies: {biometric_data.get('foodAllergies', 'None')}\n"
+            f"- Preference Food: {biometric_data.get('preferenceFood', 'None')}\n"
+            f"- Fitness Goals: Endurance({biometric_data.get('fitnessGoals', {}).get('endurance', False)}), "
+            f"Muscle Gain({biometric_data.get('fitnessGoals', {}).get('muscleGain', False)}), "
+            f"Strength({biometric_data.get('fitnessGoals', {}).get('strength', False)}), "
+            f"Weight Loss({biometric_data.get('fitnessGoals', {}).get('weightLoss', False)})\n"
             f"- Last Updated: {biometric_data.get('last_updated', 'N/A')}\n"
         )
     else:
         biometric_info = "No biometric data available for this user.\n"
+    
 
-    # Build the prompt for the LLM
-    prompt = (
-        f"{custom_prompt}\n"
-        f"{biometric_info}\n"
-        f"{context_info}\n"
-        f"Previous Conversation:\n{conversation_history}\n"
-        f"User Query: {query}\nAI:"
+    # Build final prompt dynamically
+    prompt =(
+        f"Given the following context and user information, please respond to the user's query.\n\n"
+        f"Assistant Role and Guidelines:\n{SYSTEM_PROMPT}\n\n"
+        f"User Information:\n{biometric_info}\n"
+        f"Relevant Context:\n{context_info}\n"
+        f"Conversation History:\n{conversation_history}\n\n"
+        f"User Query: {query}"
     )
 
-    response = qa_chain.invoke(prompt)
+    # Invoke LLM with stored system prompt
+    try:
+        response = qa_chain.invoke(prompt)
 
-    final_response = response['result'].rstrip('\n')
-    memory.append_to_history(query, final_response)
+        final_response = response['result'].rstrip('\n')
+        memory.append_to_history(query, final_response)
 
-    return final_response
+        return final_response
+    except Exception as e:
+        print(f"Error during QA chain execution: {e}")
+        return "I apologize, but I encountered an error processing your request. Please try again."
