@@ -337,7 +337,6 @@ Do not tell users to consult a doctor or registered dietitian for personalized p
 Rely on the Food Data provided for creating the plans. 
 Do not generate plans solely based on your own assumptions; incorporate the provided data. 
 Avoid generic advice and focus on the user's individual needs. 
-Keep the answers brief, with a maximum of 6 lines. 
 Avoid speculative statements."""
 
 def call_rag_agent(query, userId):

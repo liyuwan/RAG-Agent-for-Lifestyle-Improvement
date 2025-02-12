@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:rag_flutter_app/pages/test_page.dart';
+import 'package:rag_flutter_app/pages/main_page.dart';
 
 class Input_2Page extends StatefulWidget {
   @override
@@ -55,7 +55,7 @@ class _Input_2PageState extends State<Input_2Page > {
 
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => HomeScreen()),
+        MaterialPageRoute(builder: (context) => MainPage()),
       );
 
     } catch (e) {
