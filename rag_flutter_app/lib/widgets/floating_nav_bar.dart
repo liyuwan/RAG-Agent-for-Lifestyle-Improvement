@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:rag_flutter_app/pages/progress_page.dart';
 import 'package:rag_flutter_app/pages/chat_page.dart';
 
 class FloatingNavigationBar extends StatelessWidget {
@@ -84,7 +85,7 @@ class FloatingNavigationBar extends StatelessWidget {
       case 2:
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => BarChartPage()),
+          MaterialPageRoute(builder: (context) => ProgressPage()),
         );
         break;
       case 3:

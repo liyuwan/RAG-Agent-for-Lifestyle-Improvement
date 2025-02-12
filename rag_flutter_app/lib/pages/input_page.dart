@@ -32,8 +32,15 @@ class _InputPageState extends State<InputPage> {
     if (pickedFile != null) {
       setState(() {
         _image = File(pickedFile.path);
+        print("Image selected: ${_image!.path}");
       });
+    } else {
+      print("No image selected.");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No image selected')),
+      );
     }
+
   }
 
   // Function to upload the image to Firebase Storage
@@ -42,10 +49,18 @@ class _InputPageState extends State<InputPage> {
       String fileName = 'profile_images/${DateTime.now().millisecondsSinceEpoch}.jpg';
       Reference ref = FirebaseStorage.instance.ref().child(fileName);
       UploadTask uploadTask = ref.putFile(image);
+
       TaskSnapshot snapshot = await uploadTask;
-      return await snapshot.ref.getDownloadURL();
+      String downloadURL = await snapshot.ref.getDownloadURL();
+
+      print("Image uploaded successfully: $downloadURL");
+
+      return downloadURL;
     } catch(e) {
       print("Image upload failed: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Image upload failed: $e')),
+      );
       return null;
     }
   }
@@ -65,10 +80,19 @@ class _InputPageState extends State<InputPage> {
           return;
         }
 
+        if (_image == null) {
+          print("No image selected for upload.");
+        } else {
+          print("Uploading image: ${_image!.path}");
+        }
+
         //Upload image if selected 
         String? imageUrl;
         if (_image != null) {
           imageUrl = await _uploadImage(_image!);
+          if (imageUrl == null) {
+            print("Failed to upload image, skipping profileImage field.");
+          }
         }
 
         //Store data in Firestore
@@ -77,9 +101,13 @@ class _InputPageState extends State<InputPage> {
           'age': int.parse(_ageController.text.trim()),
           'weight': double.parse(_weightController.text.trim()),
           'height': double.parse(_heightController.text.trim()),
-          'profileImage': imageUrl, // Firebase Storage URL or null
+          'profileImage': imageUrl ?? "", // Firebase Storage URL or null
           'last_updated': FieldValue.serverTimestamp(),
+          'heart_rate': 92,
+          'steps': 1423,
         });
+
+        print("User profile saved successfully!"); // Debugging log
 
         Navigator.pushReplacement(
           context,
@@ -87,6 +115,7 @@ class _InputPageState extends State<InputPage> {
         );
 
       } catch(e) {
+        print("Error saving profile: $e");
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error: ${e.toString()}')),
         );

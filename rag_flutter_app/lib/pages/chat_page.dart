@@ -4,19 +4,9 @@ import '../services/api_service.dart';
 import 'voice_chat_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'login_page.dart';
+import 'profile_page.dart';
 
 // Dummy pages
-class ProfilePage extends StatelessWidget {
-  const ProfilePage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Profile')),
-      body: const Center(child: Text('Profile Page (Dummy)')),
-    );
-  }
-}
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});

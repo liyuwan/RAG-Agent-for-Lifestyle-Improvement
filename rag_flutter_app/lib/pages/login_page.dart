@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'input_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'test_page.dart';
+import 'input_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -29,7 +30,7 @@ class _LoginPageState extends State<LoginPage> {
       // Navigate to HomeScreen if login is successful
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const InputPage()),
+        MaterialPageRoute(builder: (context) => const HomeScreen()),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -63,9 +64,10 @@ class _LoginPageState extends State<LoginPage> {
         'last_updated': FieldValue.serverTimestamp(),
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Registration successful! Please log in.')),
+      Navigator.pushReplacement(
+        context, MaterialPageRoute(builder: (context) => const InputPage()),
       );
+
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Registration failed: ${e.toString()}')),
