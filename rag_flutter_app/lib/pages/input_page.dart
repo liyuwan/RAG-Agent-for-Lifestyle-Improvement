@@ -452,7 +452,7 @@ class _Input_2PageState extends State<Input_2Page > {
                   ),
                 ],
               ),
-              SizedBox(height: 30),
+              SizedBox(height: 185),
               _isSubmitting
                 ? const CircularProgressIndicator()
                 :ElevatedButton(
