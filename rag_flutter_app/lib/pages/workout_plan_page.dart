@@ -39,9 +39,9 @@ class WorkoutPlanPage extends StatelessWidget {
       return Container(
         margin: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          border: Border.all(color: Colors.blue, width: 2),
+          border: Border.all(color: Color(0xFF008080), width: 2),
           borderRadius: BorderRadius.circular(8),
-          color: Colors.blue[50],
+          color: Color(0xFF008080).withOpacity(0.1),
         ),
         child: Padding(
           padding: const EdgeInsets.all(12),
@@ -107,7 +107,6 @@ class WorkoutPlanPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Workout Plans"),
         automaticallyImplyLeading: false,
       ),
       body: StreamBuilder<QuerySnapshot>(

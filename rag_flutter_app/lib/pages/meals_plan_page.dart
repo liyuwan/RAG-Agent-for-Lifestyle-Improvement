@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'dart:convert'; // For decoding JSON content
+import 'dart:convert';
 
 class MealsPlanPage extends StatelessWidget {
   const MealsPlanPage({super.key});
@@ -21,34 +21,52 @@ class MealsPlanPage extends StatelessWidget {
         .snapshots();
   }
 
+  /// Calculate total calories from breakfast, lunch, and dinner.
+  int _calculateTotalCalories(Map<String, dynamic> content) {
+    int total = 0;
+    final mealKeys = ['breakfast', 'lunch', 'dinner'];
+    for (var mealKey in mealKeys) {
+      if (content[mealKey] != null && content[mealKey]['calories'] != null) {
+        total += content[mealKey]['calories'] as int;
+      }
+    }
+    return total;
+  }
+
   Widget buildMealPlanCard(Map<String, dynamic> content, DateTime date) {
+    final totalCalories = _calculateTotalCalories(content);
+
     return Container(
       margin: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.green, width: 2),
+        border: Border.all(color: Color(0xFF008080), width: 2),
         borderRadius: BorderRadius.circular(8),
-        color: Colors.green[50],
+        color: Color(0xFF008080).withOpacity(0.1),
       ),
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Plan type and date header
-            Row(
+            // Header with Meal Plan title and total calories
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
                   "MEAL PLAN",
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
-                const Spacer(),
+                const SizedBox(height: 12),
                 Text(
-                  "${date.day}/${date.month}/${date.year}",
-                  style: TextStyle(color: Colors.grey[600]),
+                  "Total Calories: $totalCalories kcal",
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ],
             ),
-            const Divider(),
+            const Divider(height: 24),
             // Meal sections
             _buildMealSection('Breakfast', content['breakfast']),
             _buildMealSection('Lunch', content['lunch']),
@@ -63,22 +81,38 @@ class MealsPlanPage extends StatelessWidget {
     if (data == null) return const SizedBox.shrink();
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             title,
-            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+            style: const TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 16,
+              color: Color(0xFF008080),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: (data['food_items'] as List).map<Widget>((item) => 
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Text(
+                  item,
+                  style: const TextStyle(fontSize: 14),
+                ),
+              ),
+            ).toList(),
           ),
           const SizedBox(height: 4),
           Text(
-            "Items: ${(data['food_items'] as List).join(', ')}",
-            style: const TextStyle(fontSize: 14),
-          ),
-          Text(
-            "Calories: ${data['calories']}",
-            style: const TextStyle(fontSize: 14, color: Colors.grey),
+            "${data['calories']} kcal",
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ],
       ),
@@ -89,7 +123,6 @@ class MealsPlanPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Meal Plans"),
         automaticallyImplyLeading: false,
       ),
       body: StreamBuilder<QuerySnapshot>(
@@ -99,7 +132,6 @@ class MealsPlanPage extends StatelessWidget {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
-            print("Error: ${snapshot.error}"); // Log the error
             return const Center(child: Text("Error loading meal plans"));
           }
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
@@ -119,7 +151,6 @@ class MealsPlanPage extends StatelessWidget {
               ],
             );
           } catch (e) {
-            print("Error parsing meal plan: $e"); // Log the parsing error
             return const Center(child: Text("Error parsing meal plan"));
           }
         },
