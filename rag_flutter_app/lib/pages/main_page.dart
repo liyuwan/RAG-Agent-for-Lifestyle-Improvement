@@ -89,7 +89,7 @@ class _MainPageState extends State<MainPage> {
         child: Icon(
           icon,
           size: 30,
-          color: _selectedIndex == index ? const Color(0xFF008080) : Colors.black54,
+          color: _selectedIndex == index ? const Color(0xFF008080) : Colors.white70,
         ),
       ),
     );
