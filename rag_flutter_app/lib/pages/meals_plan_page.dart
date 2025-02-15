@@ -18,6 +18,7 @@ class MealsPlanPage extends StatelessWidget {
         .collection('plans')
         .where('type', isEqualTo: 'meal')
         .orderBy('date', descending: true)
+        .limit(1)
         .snapshots();
   }
 

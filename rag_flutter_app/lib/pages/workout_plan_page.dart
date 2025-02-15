@@ -5,7 +5,7 @@ import 'package:intl/intl.dart'; // For date formatting
 import 'dart:convert'; // For decoding JSON
 
 class WorkoutPlanPage extends StatelessWidget {
-  const WorkoutPlanPage({Key? key}) : super(key: key);
+  const WorkoutPlanPage({super.key});
 
   /// Get the current user ID with null safety.
   String get userId {
@@ -26,6 +26,7 @@ class WorkoutPlanPage extends StatelessWidget {
         .collection('plans')
         .where('type', isEqualTo: 'workout') // Filter for workout plans only
         .orderBy('date', descending: true)
+        .limit(1)
         .snapshots();
   }
 
