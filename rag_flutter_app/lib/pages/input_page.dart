@@ -254,7 +254,7 @@ class _InputPageState extends State<InputPage> {
                         borderRadius: BorderRadius.circular(24),
                       ),
                     ),
-                  child: Text('Save', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+                  child: Text('Next', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
                 ),
               ],
             ),
@@ -281,6 +281,18 @@ class _Input_2PageState extends State<Input_2Page > {
   bool option3 = false;
   bool option4 = false;
   bool _isSubmitting = false;
+  double workoutLevel = 0;
+
+  // Function to convert numeric workout levels to string descriptions
+  String _convertWorkoutLevelToString(double level) {
+    switch (level.toInt()) {
+      case 0: return "very mild";
+      case 1: return "mild";
+      case 2: return "moderate";
+      case 3: return "intense";
+      default: return "very intense";
+    }
+  }
 
   Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) return;
@@ -297,6 +309,10 @@ class _Input_2PageState extends State<Input_2Page > {
         return;
       }
 
+    // Convert workout level to a descriptive string
+    String workoutLevelString = _convertWorkoutLevelToString(workoutLevel);
+
+
       // Store data in Firestore
       await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
         'preferenceFood': foodController.text.trim(),
@@ -308,6 +324,8 @@ class _Input_2PageState extends State<Input_2Page > {
           'strength': option3,
           'endurance': option4,
         },
+        'workoutLevel': workoutLevel,
+        'workoutLevelString': workoutLevelString,
         'last_updated': FieldValue.serverTimestamp(),
       });
 
@@ -351,7 +369,7 @@ class _Input_2PageState extends State<Input_2Page > {
                   expands: true,
                   textAlignVertical: TextAlignVertical.top,
                   style: TextStyle(fontSize: 12),
-                  decoration: InputDecoration(border: OutlineInputBorder(borderRadius: BorderRadius.circular(24))),
+                  decoration: InputDecoration(border: OutlineInputBorder(borderRadius: BorderRadius.circular(18))),
                 ),
               ),
               SizedBox(height: 15),
@@ -367,7 +385,7 @@ class _Input_2PageState extends State<Input_2Page > {
                   expands: true,
                   textAlignVertical: TextAlignVertical.top,
                   style: TextStyle(fontSize: 12),
-                  decoration: InputDecoration(border: OutlineInputBorder(borderRadius: BorderRadius.circular(24))),
+                  decoration: InputDecoration(border: OutlineInputBorder(borderRadius: BorderRadius.circular(18))),
                 ),
               ),
               SizedBox(height: 15),
@@ -382,7 +400,7 @@ class _Input_2PageState extends State<Input_2Page > {
                   expands: true,
                   textAlignVertical: TextAlignVertical.top,
                   style: TextStyle(fontSize: 12),
-                  decoration: InputDecoration(border: OutlineInputBorder(borderRadius: BorderRadius.circular(24))),
+                  decoration: InputDecoration(border: OutlineInputBorder(borderRadius: BorderRadius.circular(18))),
                 ),
               ),
               SizedBox(height: 30),
@@ -395,7 +413,7 @@ class _Input_2PageState extends State<Input_2Page > {
                       children: [
                         CheckboxListTile(                 
                           visualDensity: VisualDensity(horizontal: -4, vertical: -4), // Reduces spacing inside checkbox
-                          contentPadding: EdgeInsets.only(right: 25, left: 15, top: 0),
+                          contentPadding: EdgeInsets.only(right: 25, left: 25, top: 0),
                           title: Text("Weight Loss", style: TextStyle(fontSize: 12)),
                           value: option1,          
                           onChanged: (bool? value) {
@@ -407,7 +425,7 @@ class _Input_2PageState extends State<Input_2Page > {
                         ),
                         CheckboxListTile(
                           visualDensity: VisualDensity(horizontal: -4, vertical: -4), // Reduces spacing inside checkbox
-                          contentPadding: EdgeInsets.only(right: 25, left: 15, top: 0),
+                          contentPadding: EdgeInsets.only(right: 25, left: 25, top: 0),
                           title: Text("Muscle Gain", style: TextStyle(fontSize: 12)),
                           value: option2,
                           onChanged: (bool? value) {
@@ -452,7 +470,36 @@ class _Input_2PageState extends State<Input_2Page > {
                   ),
                 ],
               ),
-              SizedBox(height: 185),
+              SizedBox(height: 40),
+              Text("Workout Level"),
+              SizedBox(height: 25),
+              SizedBox(
+                width: 325,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text("Mild", style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+                    Expanded(
+                      child: Slider(
+                        value: workoutLevel,
+                        min: 0,
+                        max: 4,
+                        divisions: 4,
+                        label: workoutLevel.toStringAsFixed(0),
+                        onChanged: (value) {
+                          setState(() {
+                            workoutLevel = value;
+                          });
+                        },
+                        activeColor: Color(0xFF008080),
+                        inactiveColor: Colors.grey[300],
+                      ),
+                    ),
+                    Text("Intense", style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+                  ],
+                ),
+              ),
+              SizedBox(height: 45),
               _isSubmitting
                 ? const CircularProgressIndicator()
                 :ElevatedButton(

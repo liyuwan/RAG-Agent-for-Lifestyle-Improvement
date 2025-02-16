@@ -197,7 +197,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                   borderRadius: BorderRadius.circular(24),
                                 ),
                               ),
-                              child: Text('Save', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+                              child: Text('Next', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
                             ),
                     ],
                   ),
@@ -240,6 +240,8 @@ class _Profile_2PageState extends State<Profile_2Page> {
   bool option4 = false;
   bool _isSubmitting = false;
   bool _isLoading = true;
+  double workoutLevel = 0;
+  String workoutLevelString = '';
 
   @override
   void initState() {
@@ -263,6 +265,8 @@ class _Profile_2PageState extends State<Profile_2Page> {
           option2 = userDoc['fitnessGoals']['muscleGain'] ?? false;
           option3 = userDoc['fitnessGoals']['strength'] ?? false;
           option4 = userDoc['fitnessGoals']['endurance'] ?? false;
+          workoutLevel = (userDoc['workoutLevel'] ?? 0).toDouble();
+          workoutLevelString = userDoc['workoutLevelString'] ?? '';
           _isLoading = false;
         });
       }
@@ -272,12 +276,26 @@ class _Profile_2PageState extends State<Profile_2Page> {
     }
   }
 
+  // Function to convert numeric workout levels to string descriptions
+  String _convertWorkoutLevelToString(double level) {
+    switch (level.toInt()) {
+      case 0: return "very mild";
+      case 1: return "mild";
+      case 2: return "moderate";
+      case 3: return "intense";
+      default: return "very intense";
+    }
+  }
+
   Future<void> _updateProfile() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isSubmitting = true);
     User? user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
+
+    // Convert workout level to a descriptive string
+    String workoutLevelString = _convertWorkoutLevelToString(workoutLevel);
 
     try {
       await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
@@ -290,13 +308,14 @@ class _Profile_2PageState extends State<Profile_2Page> {
           'strength': option3,
           'endurance': option4,
         },
+        'workoutLevel': workoutLevel,
+        'workoutLevelString': workoutLevelString,
         'last_updated': FieldValue.serverTimestamp(),
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Profile Updated Successfully!')),
       );
-
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: ${e.toString()}')),
@@ -332,7 +351,36 @@ class _Profile_2PageState extends State<Profile_2Page> {
                       _buildCheckbox("Muscle Gain", option2, (val) => setState(() => option2 = val)),
                       _buildCheckbox("Strength", option3, (val) => setState(() => option3 = val)),
                       _buildCheckbox("Endurance", option4, (val) => setState(() => option4 = val)),
-                      SizedBox(height: 50),
+                      SizedBox(height: 25),
+                      Text("Workout Level"),
+                      SizedBox(height: 25),
+                      SizedBox(
+                        width: 325,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text("Mild", style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+                            Expanded(
+                              child: Slider(
+                                value: workoutLevel,
+                                min: 0,
+                                max: 4,
+                                divisions: 4,
+                                label: workoutLevel.toStringAsFixed(0),
+                                onChanged: (value) {
+                                  setState(() {
+                                    workoutLevel = value;
+                                  });
+                                },
+                                activeColor: Color(0xFF008080),
+                                inactiveColor: Colors.grey[300],
+                              ),
+                            ),
+                            Text("Intense", style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+                          ],
+                        ),
+                      ),
+                      SizedBox(height: 30),
                       _isSubmitting
                           ? CircularProgressIndicator()
                           : ElevatedButton(
@@ -374,4 +422,3 @@ class _Profile_2PageState extends State<Profile_2Page> {
     );
   }
 }
-
