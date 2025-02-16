@@ -197,7 +197,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                   borderRadius: BorderRadius.circular(24),
                                 ),
                               ),
-                              child: Text('Save', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+                              child: Text('Next', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
                             ),
                     ],
                   ),
@@ -240,6 +240,7 @@ class _Profile_2PageState extends State<Profile_2Page> {
   bool option4 = false;
   bool _isSubmitting = false;
   bool _isLoading = true;
+  double workoutLevel = 0;
 
   @override
   void initState() {
@@ -263,6 +264,7 @@ class _Profile_2PageState extends State<Profile_2Page> {
           option2 = userDoc['fitnessGoals']['muscleGain'] ?? false;
           option3 = userDoc['fitnessGoals']['strength'] ?? false;
           option4 = userDoc['fitnessGoals']['endurance'] ?? false;
+          workoutLevel = (userDoc['workoutLevel'] ?? 0).toDouble();
           _isLoading = false;
         });
       }
@@ -290,13 +292,13 @@ class _Profile_2PageState extends State<Profile_2Page> {
           'strength': option3,
           'endurance': option4,
         },
+        'workoutLevel': workoutLevel,
         'last_updated': FieldValue.serverTimestamp(),
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Profile Updated Successfully!')),
       );
-
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: ${e.toString()}')),
@@ -332,6 +334,21 @@ class _Profile_2PageState extends State<Profile_2Page> {
                       _buildCheckbox("Muscle Gain", option2, (val) => setState(() => option2 = val)),
                       _buildCheckbox("Strength", option3, (val) => setState(() => option3 = val)),
                       _buildCheckbox("Endurance", option4, (val) => setState(() => option4 = val)),
+                      SizedBox(height: 30),
+                      Text("Workout Level"),
+                      Slider(
+                        value: workoutLevel,
+                        min: 0,
+                        max: 10,
+                        divisions: 10,
+                        label: workoutLevel.round().toString(),
+                        onChanged: (value) {
+                          setState(() {
+                            workoutLevel = value;
+                          });
+                        },
+                        activeColor: Color(0xFF008080),
+                      ),
                       SizedBox(height: 50),
                       _isSubmitting
                           ? CircularProgressIndicator()
@@ -374,4 +391,3 @@ class _Profile_2PageState extends State<Profile_2Page> {
     );
   }
 }
-

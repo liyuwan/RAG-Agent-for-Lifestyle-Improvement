@@ -254,7 +254,7 @@ class _InputPageState extends State<InputPage> {
                         borderRadius: BorderRadius.circular(24),
                       ),
                     ),
-                  child: Text('Save', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+                  child: Text('Next', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
                 ),
               ],
             ),
@@ -281,6 +281,7 @@ class _Input_2PageState extends State<Input_2Page > {
   bool option3 = false;
   bool option4 = false;
   bool _isSubmitting = false;
+  double workoutLevel = 0;
 
   Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) return;
@@ -308,6 +309,7 @@ class _Input_2PageState extends State<Input_2Page > {
           'strength': option3,
           'endurance': option4,
         },
+        'workoutLevel': workoutLevel,
         'last_updated': FieldValue.serverTimestamp(),
       });
 
@@ -395,7 +397,7 @@ class _Input_2PageState extends State<Input_2Page > {
                       children: [
                         CheckboxListTile(                 
                           visualDensity: VisualDensity(horizontal: -4, vertical: -4), // Reduces spacing inside checkbox
-                          contentPadding: EdgeInsets.only(right: 25, left: 15, top: 0),
+                          contentPadding: EdgeInsets.only(right: 25, left: 25, top: 0),
                           title: Text("Weight Loss", style: TextStyle(fontSize: 12)),
                           value: option1,          
                           onChanged: (bool? value) {
@@ -407,7 +409,7 @@ class _Input_2PageState extends State<Input_2Page > {
                         ),
                         CheckboxListTile(
                           visualDensity: VisualDensity(horizontal: -4, vertical: -4), // Reduces spacing inside checkbox
-                          contentPadding: EdgeInsets.only(right: 25, left: 15, top: 0),
+                          contentPadding: EdgeInsets.only(right: 25, left: 25, top: 0),
                           title: Text("Muscle Gain", style: TextStyle(fontSize: 12)),
                           value: option2,
                           onChanged: (bool? value) {
@@ -452,7 +454,22 @@ class _Input_2PageState extends State<Input_2Page > {
                   ),
                 ],
               ),
-              SizedBox(height: 185),
+              SizedBox(height: 40),
+              Text("Workout Level"),
+              Slider(
+                value: workoutLevel,
+                min: 0,
+                max: 10,
+                divisions: 10,
+                label: workoutLevel.round().toString(),
+                onChanged: (value) {
+                  setState(() {
+                    workoutLevel = value;
+                  });
+                },
+                activeColor: Color(0xFF008080),
+              ),
+              SizedBox(height: 70),
               _isSubmitting
                 ? const CircularProgressIndicator()
                 :ElevatedButton(
