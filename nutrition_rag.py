@@ -363,6 +363,7 @@ def call_rag_agent(query, userId):
                 f"Muscle Gain({biometric_data.get('fitnessGoals', {}).get('muscleGain', False)}), "
                 f"Strength({biometric_data.get('fitnessGoals', {}).get('strength', False)}), "
                 f"Weight Loss({biometric_data.get('fitnessGoals', {}).get('weightLoss', False)})\n"
+                f"- Workout level: {biometric_data.get('workoutLevelString', 'N/A')}\n"
                 f"- Last Updated: {biometric_data.get('last_updated', 'N/A')}\n"
             )
         else:
