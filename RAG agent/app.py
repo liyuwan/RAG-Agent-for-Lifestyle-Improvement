@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify
-from nutrition_rag import call_rag_agent, listen_for_audio, speak_text
+from qa_agent import call_rag_agent
 
 app = Flask(__name__)
 

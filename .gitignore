@@ -1,8 +1,8 @@
 .env
-serviceAccountKey.json
+RAG agent/serviceAccountKey.json
 __pycache__/
 *.pyc
-food database/*.csv
-Nutrition Data/usda_food_data.json
-db/
-db/chroma.sqlite3
+RAG agent/food database/*.csv
+RAG agent/Nutrition Data/usda_food_data.json
+RAG agent/db/
+RAG agent/db/chroma.sqlite3
