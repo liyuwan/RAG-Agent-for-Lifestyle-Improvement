@@ -68,13 +68,22 @@ def save_plan_to_firestore(user_id, plan_type, plan_content):
             'ingredients': []
         }
     })
-    return plan_ref.id
 
+    # Retrieve all plans and sort by date
+    plans_query = db.collection('users').document(user_id).collection('plans').order_by('date', direction=firestore.Query.DESCENDING)
+    plans = plans_query.stream()
+    plan_ids = [plan.id for plan in plans]
+
+    # Keep only the latest 20 plans
+    if len(plan_ids) > 20:
+        for plan_id in plan_ids[20:]:
+            db.collection('users').document(user_id).collection('plans').document(plan_id).delete()
+            
 def get_user_biometric_data(user_id):
     try:
         user_doc = db.collection('users').document(user_id).get()
         if user_doc.exists:
-            return user_doc.to_dict()
+            return user_doc.to_dict()  # Returns a dictionary of biometric data
         else:
             return None
     except Exception as e:

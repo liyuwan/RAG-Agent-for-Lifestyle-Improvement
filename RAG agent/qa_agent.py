@@ -1,6 +1,6 @@
 # qa_agent.py
 from firestore_memory import FirestoreMemory
-from helpers import get_user_biometric_data
+from helpers import extract_json_from_response, get_user_biometric_data
 from plan_generation import generate_and_save_meal_plan, generate_and_save_workout_plan
 from llm_setup import qa_chain
 from config import *
@@ -14,6 +14,29 @@ Do not generate plans solely based on your own assumptions; incorporate the prov
 Avoid generic advice and focus on the user's individual needs. 
 Avoid speculative statements."""
 
+def generate_nutrient_targets(biometric_data):
+    nutrient_prompt = (
+        f"Calculate DAILY nutritional targets considering:\n"
+        f"1. User's weight: {biometric_data.get('weight', 'N/A')}kg\n"
+        f"2. Fitness goals: {biometric_data.get('fitnessGoals', 'N/A')}\n"
+        f"3. Recommended macronutrient splits\n\n"
+        "Response format:\n"
+        '''{
+        "calories": 2000,
+        "protein_g": {"min": 120, "target": 150, "max": 180},
+        "carbs_g": {"min": 200, "target": 250, "max": 300},
+        "fats_g": {"min": 50, "target": 70, "max": 90},
+        "rationale": "short explanation"
+        }'''
+        "\nINCLUDE ONLY JSON!"
+    )
+    try:
+        response = qa_chain.invoke(nutrient_prompt)
+        return extract_json_from_response(response['result'])
+    except Exception as e:
+        print(f"Error generating nutrient targets: {e}")
+        return None
+
 def call_rag_agent(query, userId):
     is_meal_plan = any(keyword in query.lower() for keyword in ['meal plan', 'meals plan', 'diet plan', 'nutrition plan'])
     is_workout_plan = any(keyword in query.lower() for keyword in ['workout plan', 'exercise plan'])
@@ -22,6 +45,8 @@ def call_rag_agent(query, userId):
         memory = FirestoreMemory(userId)
         conversation_history = memory.get_history()
         biometric_data = get_user_biometric_data(userId)
+        messages = []
+        
         if biometric_data:
             biometric_info = (
                 f"User's Biometric Data:\n"
@@ -42,22 +67,59 @@ def call_rag_agent(query, userId):
         else:
             biometric_info = "No biometric data available for this user.\n"
 
-        try:
-            retrieved_docs = qa_chain.retriever.invoke(query)
-        except Exception as e:
-            print(f"Error during retrieval: {e}")
-            retrieved_docs = []
-        context_info = (
-            f"Here is some information from your Nutrition Data PDFs and USDA food data that might help:\n"
-            f"{' '.join([doc.page_content for doc in retrieved_docs[:3]])}\n"
-            if retrieved_docs else "No relevant information found in Nutrition Data PDFs.\n"
-        )
-        
-        messages = []
+        # Handle meal plan with nutrient-based retrieval
         if is_meal_plan:
-            messages.append(generate_and_save_meal_plan(userId, query, biometric_info, context_info, conversation_history))
+            # Generate nutrient targets
+            nutrient_targets = generate_nutrient_targets(biometric_data)
+            if not nutrient_targets:
+                return "Error generating nutritional targets. Please try again."
+            
+            # Create nutrient-based query
+            nutrient_query = (
+                f"Food items matching these DAILY targets:\n"
+                f"- Calories: {nutrient_targets['calories']} ±10%\n"
+                f"- Protein: {nutrient_targets['protein_g']['target']}g ±15%\n"
+                f"FILTER BY:\n"
+                f"- Food category: {biometric_data.get('preferenceFood', 'general')}\n"
+                f"- Exclude allergens: {biometric_data.get('foodAllergies', 'none')}\n"
+                f"PRIORITIZE items with:\n"
+                f"- Complete protein sources\n"
+                f"- Whole food ingredients\n"
+                f"- Low processed options"
+            )
+            
+            # Retrieve relevant food items
+            try:
+                retrieved_docs = qa_chain.retriever.invoke(nutrient_query)
+                context_info = (
+                    "Nutritional Context:\n" + 
+                    "\n".join([doc.page_content for doc in retrieved_docs[:5]]) + 
+                    f"\n\nDaily Targets: {nutrient_query}"
+                ) if retrieved_docs else "No relevant food items found."
+            except Exception as e:
+                print(f"Nutrition retrieval error: {e}")
+                context_info = "Nutrition data unavailable."
+
+            messages.append(generate_and_save_meal_plan(
+                userId, query, biometric_info, context_info, conversation_history
+            ))
+
+        # Handle workout plan with original retrieval
         if is_workout_plan:
-            messages.append(generate_and_save_workout_plan(userId, query, biometric_info, context_info, conversation_history))
+            try:
+                retrieved_docs = qa_chain.retriever.invoke(query)
+                context_info = (
+                    "Exercise Context:\n" + 
+                    "\n".join([doc.page_content for doc in retrieved_docs[:3]])
+                ) if retrieved_docs else "No relevant exercise data."
+            except Exception as e:
+                print(f"Workout retrieval error: {e}")
+                context_info = "Workout data unavailable."
+
+            messages.append(generate_and_save_workout_plan(
+                userId, query, biometric_info, context_info, conversation_history
+            ))
+
         final_message = "\n".join(messages)
         memory.append_to_history(query, final_message)
         return final_message
