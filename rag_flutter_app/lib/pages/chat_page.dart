@@ -29,14 +29,14 @@ class ChatPage extends StatefulWidget {
 class _ChatPageState extends State<ChatPage> {
   final TextEditingController _controller = TextEditingController();
   final ApiService apiService = ApiService(baseUrl: 'http://127.0.0.1:5000');
-  final List<Map<String, dynamic>> _pendingMessages = []; // Local state for pending messages
+  final List<Map<String, dynamic>> _pendingMessages = [];
+  final ScrollController _scrollController = ScrollController();
+  bool _dataLoaded = false;
 
-  // User data variables
   String _heartRate = '';
   String _steps = '';
   String _weight = '';
 
-  // Firestore reference to chat_history
   late CollectionReference _chatHistoryCollection;
 
   @override
@@ -52,7 +52,6 @@ class _ChatPageState extends State<ChatPage> {
     _getBiometricData();
   }
 
-  // Fetch biometric data from Firestore
   Future<void> _getBiometricData() async {
     try {
       final currentUser = FirebaseAuth.instance.currentUser;
@@ -92,7 +91,6 @@ class _ChatPageState extends State<ChatPage> {
     final query = _controller.text;
     if (query.isEmpty) return;
 
-    // 1) Immediately add the user message + a pending bot message to local state
     setState(() {
       _pendingMessages.add({
         'sender': 'user',
@@ -102,33 +100,21 @@ class _ChatPageState extends State<ChatPage> {
       _pendingMessages.add({
         'sender': 'bot',
         'text': '',
-        'isPending': true, // loading spinner
+        'isPending': true,
       });
     });
 
     _controller.clear();
 
     try {
-      // 2) Call the Flask API
       await apiService.getResponseFromApi(query);
-
-      // 3) If the server call was successful, remove both the user and the bot
-      //    pending messages from local state so we don't show them twice
       setState(() {
-        // Remove the user message that matches this query
         _pendingMessages.removeWhere((msg) =>
             msg['sender'] == 'user' && msg['text'] == query);
-
-        // Remove the pending bot message (the spinner)
         _pendingMessages.removeWhere((msg) =>
             msg['sender'] == 'bot' && (msg['isPending'] == true));
       });
-
-      // Firestore will have the final user_input/bot_response,
-      // so the StreamBuilder will now display them from Firestore only.
-
     } catch (e) {
-      // 4) On error, remove the pending bot spinner and add an error message
       setState(() {
         _pendingMessages.removeWhere((msg) => msg['isPending'] == true);
         _pendingMessages.add({
@@ -140,8 +126,17 @@ class _ChatPageState extends State<ChatPage> {
       debugPrint('Error sending message: $e');
     }
   }
-    
-  
+
+  // Function to scroll to the bottom with a retry mechanism
+  void _scrollToBottom() {
+    if (_scrollController.hasClients) {
+      _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+    } else {
+      // Retry after a short delay if the controller isn’t attached yet
+      Future.delayed(Duration(milliseconds: 100), _scrollToBottom);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final currentUser = FirebaseAuth.instance.currentUser;
@@ -159,15 +154,18 @@ class _ChatPageState extends State<ChatPage> {
           children: [
             Icon(Icons.favorite, color: Colors.red, size: 20),
             const SizedBox(width: 4),
-            Text(_heartRate, style: const TextStyle(fontSize: 12, color: Colors.black)),
+            Text(_heartRate,
+                style: const TextStyle(fontSize: 12, color: Colors.black)),
             const SizedBox(width: 50),
             Icon(Icons.directions_walk, color: Colors.blue, size: 20),
             const SizedBox(width: 4),
-            Text(_steps, style: const TextStyle(fontSize: 12, color: Colors.black)),
+            Text(_steps,
+                style: const TextStyle(fontSize: 12, color: Colors.black)),
             const SizedBox(width: 50),
             Icon(Icons.scale, color: Colors.green, size: 20),
             const SizedBox(width: 4),
-            Text('$_weight kg', style: const TextStyle(fontSize: 12, color: Colors.black)),
+            Text('$_weight kg',
+                style: const TextStyle(fontSize: 12, color: Colors.black)),
           ],
         ),
         actions: [
@@ -254,32 +252,49 @@ class _ChatPageState extends State<ChatPage> {
         children: [
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
-              stream: _chatHistoryCollection.orderBy('timestamp', descending: false).snapshots(),
+              stream: _chatHistoryCollection
+                  .orderBy('timestamp', descending: false)
+                  .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
                   return Center(child: Text('Error: ${snapshot.error}'));
                 }
-                if (snapshot.connectionState == ConnectionState.waiting && _pendingMessages.isEmpty) {
+                if (snapshot.connectionState == ConnectionState.waiting &&
+                    _pendingMessages.isEmpty) {
                   return Center(child: CircularProgressIndicator());
                 }
 
                 final messages = snapshot.data?.docs ?? [];
 
-                // Combine Firestore messages with pending messages
                 final allMessages = [
-                  // Convert Firestore messages to the same format
                   ...messages.expand((doc) {
                     final data = doc.data() as Map<String, dynamic>;
                     return [
-                      {'sender': 'user', 'text': data['user_input'] ?? '', 'isPending': false},
-                      {'sender': 'bot', 'text': data['bot_response'] ?? '', 'isPending': false},
+                      {
+                        'sender': 'user',
+                        'text': data['user_input'] ?? '',
+                        'isPending': false
+                      },
+                      {
+                        'sender': 'bot',
+                        'text': data['bot_response'] ?? '',
+                        'isPending': false
+                      },
                     ];
                   }),
-                  // Add pending messages
                   ..._pendingMessages,
                 ];
 
+                // Scroll to bottom on initial data load
+                if (snapshot.hasData && !_dataLoaded) {
+                  _dataLoaded = true;
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    _scrollToBottom();
+                  });
+                }
+
                 return ListView.builder(
+                  controller: _scrollController,
                   padding: const EdgeInsets.all(8.0),
                   itemCount: allMessages.length,
                   itemBuilder: (context, index) {
@@ -288,11 +303,14 @@ class _ChatPageState extends State<ChatPage> {
                     final isPending = message['isPending'] as bool? ?? false;
 
                     return Align(
-                      alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+                      alignment:
+                          isUser ? Alignment.centerRight : Alignment.centerLeft,
                       child: Container(
                         margin: isUser
-                            ? const EdgeInsets.only(left: 30, right: 8, top: 10, bottom: 10)
-                            : const EdgeInsets.only(left: 8, right: 30, top: 10, bottom: 10),
+                            ? const EdgeInsets.only(
+                                left: 30, right: 8, top: 10, bottom: 10)
+                            : const EdgeInsets.only(
+                                left: 8, right: 30, top: 10, bottom: 10),
                         padding: const EdgeInsets.all(12.0),
                         decoration: BoxDecoration(
                           color: isUser
@@ -301,10 +319,12 @@ class _ChatPageState extends State<ChatPage> {
                           borderRadius: BorderRadius.only(
                             topLeft: const Radius.circular(16),
                             topRight: const Radius.circular(16),
-                            bottomLeft:
-                                isUser ? const Radius.circular(16) : const Radius.circular(0),
-                            bottomRight:
-                                isUser ? const Radius.circular(0) : const Radius.circular(16),
+                            bottomLeft: isUser
+                                ? const Radius.circular(16)
+                                : const Radius.circular(0),
+                            bottomRight: isUser
+                                ? const Radius.circular(0)
+                                : const Radius.circular(16),
                           ),
                         ),
                         child: isPending
@@ -316,10 +336,11 @@ class _ChatPageState extends State<ChatPage> {
                                     height: 18,
                                     child: CircularProgressIndicator(
                                       strokeWidth: 1.5,
-                                      valueColor: AlwaysStoppedAnimation<Color>(const Color(0xFF008080)),
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                          const Color(0xFF008080)),
                                     ),
                                   ),
-                                  const SizedBox(width: 8), // Spacing between animation and text
+                                  const SizedBox(width: 8),
                                   Text(
                                     'Generating...',
                                     style: TextStyle(
@@ -346,7 +367,8 @@ class _ChatPageState extends State<ChatPage> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.only(left: 10.0, right: 15.0, top: 10.0, bottom: 35.0),
+            padding: const EdgeInsets.only(
+                left: 10.0, right: 15.0, top: 10.0, bottom: 35.0),
             child: Row(
               children: [
                 IconButton(
@@ -374,13 +396,16 @@ class _ChatPageState extends State<ChatPage> {
                               });
                             });
                             try {
-                              await apiService.getResponseFromApi(message['text']!);
+                              await apiService
+                                  .getResponseFromApi(message['text']!);
                               setState(() {
-                                _pendingMessages.removeWhere((msg) => msg['isPending'] == true);
+                                _pendingMessages.removeWhere(
+                                    (msg) => msg['isPending'] == true);
                               });
                             } catch (e) {
                               setState(() {
-                                _pendingMessages.removeWhere((msg) => msg['isPending'] == true);
+                                _pendingMessages.removeWhere(
+                                    (msg) => msg['isPending'] == true);
                                 _pendingMessages.add({
                                   'sender': 'bot',
                                   'text': 'Error: $e',
