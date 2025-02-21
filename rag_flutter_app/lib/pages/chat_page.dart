@@ -31,7 +31,6 @@ class _ChatPageState extends State<ChatPage> {
   final ApiService apiService = ApiService(baseUrl: 'http://127.0.0.1:5000');
   final List<Map<String, dynamic>> _pendingMessages = [];
   final ScrollController _scrollController = ScrollController();
-  bool _dataLoaded = false;
 
   String _heartRate = '';
   String _steps = '';
@@ -50,6 +49,11 @@ class _ChatPageState extends State<ChatPage> {
           .collection('chat_history');
     }
     _getBiometricData();
+
+    // Schedule initial scroll to bottom after first build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scrollToBottom();
+    });
   }
 
   Future<void> _getBiometricData() async {
@@ -109,10 +113,10 @@ class _ChatPageState extends State<ChatPage> {
     try {
       await apiService.getResponseFromApi(query);
       setState(() {
-        _pendingMessages.removeWhere((msg) =>
-            msg['sender'] == 'user' && msg['text'] == query);
-        _pendingMessages.removeWhere((msg) =>
-            msg['sender'] == 'bot' && (msg['isPending'] == true));
+        _pendingMessages.removeWhere(
+            (msg) => msg['sender'] == 'user' && msg['text'] == query);
+        _pendingMessages
+            .removeWhere((msg) => msg['sender'] == 'bot' && (msg['isPending'] == true));
       });
     } catch (e) {
       setState(() {
@@ -129,11 +133,18 @@ class _ChatPageState extends State<ChatPage> {
 
   // Function to scroll to the bottom with a retry mechanism
   void _scrollToBottom() {
-    if (_scrollController.hasClients) {
-      _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+    if (_scrollController.hasClients &&
+        _scrollController.position.maxScrollExtent > 0) {
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
     } else {
-      // Retry after a short delay if the controller isn’t attached yet
-      Future.delayed(Duration(milliseconds: 100), _scrollToBottom);
+      // Retry after a slightly longer delay if the controller isn’t ready or content isn’t loaded
+      Future.delayed(Duration(milliseconds: 200), () {
+        if (mounted) _scrollToBottom();
+      });
     }
   }
 
@@ -285,14 +296,6 @@ class _ChatPageState extends State<ChatPage> {
                   ..._pendingMessages,
                 ];
 
-                // Scroll to bottom on initial data load
-                if (snapshot.hasData && !_dataLoaded) {
-                  _dataLoaded = true;
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    _scrollToBottom();
-                  });
-                }
-
                 return ListView.builder(
                   controller: _scrollController,
                   padding: const EdgeInsets.all(8.0),
@@ -303,8 +306,9 @@ class _ChatPageState extends State<ChatPage> {
                     final isPending = message['isPending'] as bool? ?? false;
 
                     return Align(
-                      alignment:
-                          isUser ? Alignment.centerRight : Alignment.centerLeft,
+                      alignment: isUser
+                          ? Alignment.centerRight
+                          : Alignment.centerLeft,
                       child: Container(
                         margin: isUser
                             ? const EdgeInsets.only(
@@ -449,5 +453,12 @@ class _ChatPageState extends State<ChatPage> {
         ],
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    _controller.dispose();
+    super.dispose();
   }
 }
