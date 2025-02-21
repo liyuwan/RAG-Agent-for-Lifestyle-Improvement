@@ -1,18 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:rag_flutter_app/pages/chat_page.dart';
 import 'package:rag_flutter_app/pages/meals_plan_page.dart';
+import 'package:rag_flutter_app/pages/progress_page.dart';
 import 'package:rag_flutter_app/pages/workout_plan_page.dart';
 
-
-// Dummy page for Progress
-
-class ProgressPage extends StatelessWidget {
-  const ProgressPage({super.key});
-  @override
-  Widget build(BuildContext context) {
-    return Center(child: Text("Progress Content"));
-  }
-}
 
 class MainPage extends StatefulWidget {
   const MainPage({super.key});
