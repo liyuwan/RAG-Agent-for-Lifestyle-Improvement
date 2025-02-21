@@ -3,91 +3,103 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '/pages/login_page.dart';
 import '/pages/profile_page.dart';
 
-// Define the new MenuBarIcon widget
 class MenuBarIcon extends StatelessWidget {
-  const MenuBarIcon ({super.key});
+  const MenuBarIcon({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return PopupMenuButton<String>(
-      icon: const Icon(Icons.more_vert), // Vertical three dots icon
-      onSelected: (value) {
-        switch (value) {
-          case 'Profile':
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const ProfilePage()),
-            );
-            break;
-          case 'Settings':
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const SettingsPage()),
-            );
-            break;
-          case 'Logout':
-            FirebaseAuth.instance.signOut();
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => const LoginPage()),
-            );
-            break;
-        }
-      },
-      itemBuilder: (BuildContext context) {
-        return {'Profile', 'Settings', 'Logout'}.map((String choice) {
-          IconData icon;
-          Color iconColor = const Color(0xFF008080); // Teal color
-          switch (choice) {
-            case 'Profile':
-              icon = Icons.account_circle;
-              break;
-            case 'Settings':
-              icon = Icons.settings;
-              break;
-            case 'Logout':
-              icon = Icons.exit_to_app;
-              iconColor = Colors.red;
-              break;
-            default:
-              icon = Icons.help;
-          }
-
-          return PopupMenuItem<String>(
-            value: choice,
-            padding: EdgeInsets.zero, // Remove padding
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.3),
-                        blurRadius: 10.0,
-                        spreadRadius: 1.0,
-                        offset: const Offset(3, 3),
-                      ),
-                    ],
-                  ),
-                  child: CircleAvatar(
-                    backgroundColor: Colors.grey[200],
-                    radius: 20,
-                    child: Icon(icon, color: iconColor),
+    return Stack(
+      clipBehavior: Clip.none, // Allows the menu to float outside the container
+      children: [
+        Container(
+          width: 40,
+          height: 40,
+          decoration: const BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.white, // White background
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black26,
+                blurRadius: 4,
+                spreadRadius: 1,
+                offset: Offset(2, 2),
+              ),
+            ],
+          ),
+          child: PopupMenuButton<String>(
+            icon: const Icon(Icons.menu, color: Colors.black),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            constraints: const BoxConstraints(
+              minWidth: 142,
+              maxWidth: 142,
+              minHeight: 185,
+              maxHeight: 185,
+            ), // Sets the menu size
+            offset: const Offset(5 , -5),
+            onSelected: (value) {
+              switch (value) {
+                case 'Profile':
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const ProfilePage()),
+                  );
+                  break;
+                case 'Settings':
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const SettingsPage()),
+                  );
+                  break;
+                case 'Logout':
+                  FirebaseAuth.instance.signOut();
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (context) => const LoginPage()),
+                  );
+                  break;
+              }
+            },
+            itemBuilder: (BuildContext context) {
+              return [
+                const PopupMenuItem<String>(
+                  enabled: false,
+                  height: 30,
+                  child: Center(
+                    child: Text(
+                      "Menu",
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color.fromARGB(255, 0, 0, 0)),
+                    ),
                   ),
                 ),
-              ],
-            ),
-          );
-        }).toList();
-      },
-      color: Colors.transparent, // Transparent background
-      elevation: 0, // No shadow
-      offset: const Offset(30, 30), // Position adjustment
+                const PopupMenuDivider(), // Adds a separator
+                _buildMenuItem("Profile", Icons.account_circle, const Color(0xFF008080)),
+                _buildMenuItem("Setting", Icons.settings, Colors.black),
+                _buildMenuItem("Log out", Icons.exit_to_app, Colors.red),
+              ];
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  PopupMenuItem<String> _buildMenuItem(String title, IconData icon, Color color) {
+    return PopupMenuItem<String>(
+      value: title,
+      height: 40,
+      child: Row(
+        children: [
+          Icon(icon, color: color),
+          const SizedBox(width: 20),
+          Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+        ],
+      ),
     );
   }
 }
+
 
 // SettingsPage (unchanged)
 class SettingsPage extends StatelessWidget {
@@ -102,4 +114,4 @@ class SettingsPage extends StatelessWidget {
   }
 }
 
-// ProgressPage (updated to use MenuBarIcon)
+
