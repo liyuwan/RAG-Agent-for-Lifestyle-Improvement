@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../widgets/menu_bar_icon.dart';
 
 class ProgressPage extends StatefulWidget {
@@ -15,7 +14,8 @@ class _ProgressPageState extends State<ProgressPage> {
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
-         flexibleSpace: Stack(
+        automaticallyImplyLeading: false,
+        flexibleSpace: Stack(
           children: [
             Positioned(
               right: 25, // Move the icon to the right

@@ -28,6 +28,7 @@ class MenuBarIcon extends StatelessWidget {
           ),
           child: PopupMenuButton<String>(
             icon: const Icon(Icons.menu, color: Colors.black),
+            color: Colors.white,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
             ),
@@ -69,14 +70,14 @@ class MenuBarIcon extends StatelessWidget {
                   child: Center(
                     child: Text(
                       "Menu",
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color.fromARGB(255, 0, 0, 0)),
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color.fromARGB(255, 0, 0, 0)),
                     ),
                   ),
                 ),
                 const PopupMenuDivider(), // Adds a separator
-                _buildMenuItem("Profile", Icons.account_circle, const Color(0xFF008080)),
-                _buildMenuItem("Setting", Icons.settings, Colors.black),
-                _buildMenuItem("Log out", Icons.exit_to_app, Colors.red),
+                _buildMenuItem("Profile", Icons.account_circle, Colors.black87),
+                _buildMenuItem("Settings", Icons.settings_outlined, Colors.black87),
+                _buildMenuItem("Log out", Icons.logout_outlined, Colors.red),
               ];
             },
           ),
