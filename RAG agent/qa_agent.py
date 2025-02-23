@@ -1,4 +1,3 @@
-# qa_agent.py
 from firestore_memory import FirestoreMemory
 from helpers import extract_json_from_response, get_user_biometric_data
 from plan_generation import generate_and_save_meal_plan, generate_and_save_workout_plan
@@ -6,13 +5,22 @@ from llm_setup import qa_chain
 from config import *
 from vector_store import get_vector_store
 
-SYSTEM_PROMPT = """You are a personalized AI assistant specializing in nutrition and fitness. 
-Your task is to use the provided user-specific biometric data and context to create tailored meal and workout plans for users. 
-Do not tell users to consult a doctor or registered dietitian for personalized plans. It is your task to provide such plans. 
-Rely on the Food Data provided for creating the plans. 
-Do not generate plans solely based on your own assumptions; incorporate the provided data. 
-Avoid generic advice and focus on the user's individual needs. 
-Avoid speculative statements."""
+SYSTEM_PROMPT = """You are a knowledgeable AI assistant specializing in nutrition, fitness, and general health. 
+Your primary tasks are:
+1. Answer general questions about nutrition, fitness, and health with accurate, evidence-based information.
+2. Create personalized meal and workout plans for users based on their biometric data and preferences.
+
+For general questions:
+- Provide clear, concise, and evidence-based answers.
+- Avoid speculative statements and rely on established knowledge.
+
+For personalized plans:
+- Use the provided user-specific biometric data and context to create tailored meal and workout plans.
+- Do not tell users to consult a doctor or registered dietitian for personalized plans. It is your task to provide such plans.
+- Rely on the Food Data provided for creating the plans.
+- Avoid generic advice and focus on the user's individual needs.
+
+Always prioritize accuracy and clarity in your responses."""
 
 def generate_nutrient_targets(biometric_data):
     nutrient_prompt = (
@@ -101,7 +109,7 @@ def call_rag_agent(query, userId):
                 context_info = "Nutrition data unavailable."
 
             messages.append(generate_and_save_meal_plan(
-                userId, query, biometric_info, context_info, conversation_history
+                userId, query, SYSTEM_PROMPT, biometric_info, context_info, conversation_history
             ))
 
         # Handle workout plan with original retrieval
@@ -117,7 +125,7 @@ def call_rag_agent(query, userId):
                 context_info = "Workout data unavailable."
 
             messages.append(generate_and_save_workout_plan(
-                userId, query, biometric_info, context_info, conversation_history
+                userId, query, SYSTEM_PROMPT, biometric_info, context_info, conversation_history
             ))
 
         final_message = "\n".join(messages)
@@ -128,6 +136,8 @@ def call_rag_agent(query, userId):
             memory = FirestoreMemory(userId)
             conversation_history = memory.get_history()
             biometric_data = get_user_biometric_data(userId)
+            
+            # Handle general questions
             if biometric_data:
                 biometric_info = (
                     f"User's Biometric Data:\n"
@@ -147,23 +157,15 @@ def call_rag_agent(query, userId):
             else:
                 biometric_info = "No biometric data available for this user.\n"
         
-            try:
-                retrieved_docs = qa_chain.retriever.invoke(query)
-            except Exception as e:
-                print(f"Error during retrieval: {e}")
-                retrieved_docs = []
-            context_info = (
-                f"Here is some information from your Nutrition Data PDFs and USDA food data that might help:\n"
-                f"{' '.join([doc.page_content for doc in retrieved_docs[:3]])}\n"
-                if retrieved_docs else "No relevant information found in Nutrition Data PDFs.\n"
-            )
             prompt = (
-                f"Given the following context and user information, please respond to the user's query.\n\n"
-                f"Assistant Role and Guidelines:\n{SYSTEM_PROMPT}\n\n"
+                f"System Instructions:\n{SYSTEM_PROMPT}\n\n"
                 f"User Information:\n{biometric_info}\n"
                 f"Conversation History:\n{conversation_history}\n\n"
-                f"User Query: {query}\n"
+                f"User Query: {query}\n\n"
+                "Provide a clear, concise, and evidence-based response using your training knowledge.\n\n"
+                "Use some related emojis to make the response more engaging and human-like.\n"
             )
+            
             response = qa_chain.invoke(prompt)
             final_response = response['result'].rstrip('\n')
             memory.append_to_history(query, final_response)

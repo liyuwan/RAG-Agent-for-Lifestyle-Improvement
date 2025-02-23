@@ -77,7 +77,7 @@ class MenuBarIcon extends StatelessWidget {
                 const PopupMenuDivider(), // Adds a separator
                 _buildMenuItem("Profile", Icons.account_circle, Colors.black87),
                 _buildMenuItem("Settings", Icons.settings_outlined, Colors.black87),
-                _buildMenuItem("Log out", Icons.logout_outlined, Colors.red),
+                _buildMenuItem("Logout", Icons.logout_outlined, Colors.red),
               ];
             },
           ),

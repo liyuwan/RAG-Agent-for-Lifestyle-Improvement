@@ -13,7 +13,7 @@ def generate_nutrient_context(targets):
         "Select foods from the following options:\n"
     )
 
-def generate_and_save_meal_plan(userId, query, biometric_info, context_info, conversation_history):
+def generate_and_save_meal_plan(userId, query, SYSTEM_PROMPT, biometric_info, context_info, conversation_history):
     meal_instructions = (
         "Create a varied meal plan following these rules:\n"
         "1. Use MAXIMUM 2 servings of any single food item per day\n"
@@ -43,6 +43,7 @@ def generate_and_save_meal_plan(userId, query, biometric_info, context_info, con
     )
     
     prompt = (
+        f"System Instructions:\n{SYSTEM_PROMPT}\n\n"
         f"Given the following context and user information, generate a meal plan in JSON format as instructed.\n\n"
         f"User Information:\n{biometric_info}\n"
         f"Relevant Context:\n{context_info}\n"
@@ -64,7 +65,7 @@ def generate_and_save_meal_plan(userId, query, biometric_info, context_info, con
         logging.error(f"Error in generating meal plan: {e}")
         return "Error generating meal plan. Please try again."
 
-def generate_and_save_workout_plan(userId, query, biometric_info, context_info, conversation_history):
+def generate_and_save_workout_plan(userId, query,SYSTEM_PROMPT, biometric_info, context_info, conversation_history):
     workout_instructions = (
         "Please generate a workout plan in JSON format using the following format:\n\n"
         '''[
@@ -73,6 +74,7 @@ def generate_and_save_workout_plan(userId, query, biometric_info, context_info, 
         "\nINCLUDE ONLY THE JSON WITH NO ADDITIONAL TEXT!\n"
     )
     prompt = (
+        f"System Instructions:\n{SYSTEM_PROMPT}\n\n"
         f"Given the following context and user information, generate a workout plan in JSON format as instructed.\n\n"
         f"User Information:\n{biometric_info}\n"
         f"Relevant Context:\n{context_info}\n"
