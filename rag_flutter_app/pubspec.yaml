@@ -38,3 +38,4 @@ flutter:
   assets:
     - assets/logo.png
     - assets/voice_chat.png
+    - assets/workout.png
