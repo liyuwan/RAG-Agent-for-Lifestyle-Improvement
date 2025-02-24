@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:intl/intl.dart'; // For date formatting
-import 'dart:convert'; // For decoding JSON
+import 'package:intl/intl.dart';
+import 'dart:convert';
 
-class WorkoutPlanPage extends StatelessWidget {
+class WorkoutPlanPage extends StatefulWidget {
   const WorkoutPlanPage({super.key});
 
-<<<<<<< HEAD
   @override
   _WorkoutPlanPageState createState() => _WorkoutPlanPageState();
 }
@@ -35,7 +34,7 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
         if (userDoc.exists) {
           setState(() {
             username =
-                userDoc['username'] ?? 'User'; // Default to 'User' if not found
+                userDoc['name'] ?? 'User'; // Default to 'User' if not found
           });
         }
       } catch (e) {
@@ -46,32 +45,25 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
 
   /// Fetch workout plans for the selected date
   Stream<QuerySnapshot> getWorkoutPlansForDate(DateTime selectedDate) {
-=======
-  /// Get the current user ID with null safety.
-  String get userId {
->>>>>>> parent of 420eafe (Workout page)
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return '';
-    return user.uid;
-  }
+    if (user == null) return Stream.empty();
 
-  /// Fetch only the latest workout plans from Firestore.
-  Stream<QuerySnapshot> getLatestWorkoutPlans() {
-    if (userId.isEmpty) {
-      return Stream.empty();
-    }
+    // Define the start and end of the selected date
+    final startOfDay = DateTime(
+        selectedDate.year, selectedDate.month, selectedDate.day, 0, 0, 0, 0);
+    final endOfDay = DateTime(selectedDate.year, selectedDate.month,
+        selectedDate.day, 23, 59, 59, 999);
 
     return FirebaseFirestore.instance
         .collection('users')
-        .doc(userId)
+        .doc(user.uid)
         .collection('plans')
-        .where('type', isEqualTo: 'workout') // Filter for workout plans only
-        .orderBy('date', descending: true)
-        .limit(1)
+        .where('type', isEqualTo: 'workout')
+        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
+        .where('date', isLessThanOrEqualTo: Timestamp.fromDate(endOfDay))
         .snapshots();
   }
 
-<<<<<<< HEAD
   /// Handle date selection
   void onDateSelected(DateTime date) {
     setState(() {
@@ -189,29 +181,6 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
               padding: const EdgeInsets.all(12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-=======
-  /// Build the workout plan card.
-  Widget buildWorkoutPlanCard(Map<String, dynamic> data) {
-    try {
-      final rawContent = data['content'];
-      final content = rawContent is String ? jsonDecode(rawContent) : rawContent;
-      final date = (data['date'] as Timestamp).toDate();
-
-      return Container(
-        margin: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          border: Border.all(color: Color(0xFF008080), width: 2),
-          borderRadius: BorderRadius.circular(8),
-          color: Color(0xFF008080).withOpacity(0.1),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header row with title and date
-              Row(
->>>>>>> parent of 420eafe (Workout page)
                 children: [
                   Row(
                     children: [
@@ -257,7 +226,7 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
     }
   }
 
-  /// Build the workout section showing a list of exercises.
+  /// Build workout section
   Widget _buildWorkoutSection(List<dynamic> exercises) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -267,14 +236,15 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
           child: ListTile(
             contentPadding: EdgeInsets.zero,
             title: Text(exercise['exercise']),
-            subtitle: Text("${exercise['duration']} mins • ${exercise['intensity']}"),
+            subtitle:
+                Text("${exercise['duration']} mins • ${exercise['intensity']}"),
           ),
         );
       }).toList(),
     );
   }
 
-  /// Build an error card if something goes wrong.
+  /// Build an error card
   Widget _buildErrorCard(String error) {
     return Container(
       margin: const EdgeInsets.all(10),
@@ -289,7 +259,6 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
 
   @override
   Widget build(BuildContext context) {
-<<<<<<< HEAD
     double screenHeight = MediaQuery.of(context).size.height;
 
     return Scaffold(
@@ -352,35 +321,6 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
             ),
           ),
         ],
-=======
-    return Scaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-      ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: getLatestWorkoutPlans(),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return Center(child: Text("Error: ${snapshot.error}"));
-          }
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(child: Text("No workout plans found"));
-          }
-
-          // Build workout plan cards for each document
-          final planCards = snapshot.data!.docs.map((doc) {
-            return buildWorkoutPlanCard(doc.data() as Map<String, dynamic>);
-          }).toList();
-
-          return ListView(
-            padding: const EdgeInsets.all(10),
-            children: planCards,
-          );
-        },
->>>>>>> parent of 420eafe (Workout page)
       ),
     );
   }
