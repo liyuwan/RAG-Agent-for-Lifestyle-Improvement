@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'dart:convert';
+import '../widgets/menu_bar_icon.dart';
 
 class WorkoutPlanPage extends StatefulWidget {
   const WorkoutPlanPage({super.key});
@@ -14,15 +15,16 @@ class WorkoutPlanPage extends StatefulWidget {
 class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
   DateTime selectedDate = DateTime.now();
   String username = '';
+  String workoutLevel = ''; // Store the workout level
 
   @override
   void initState() {
     super.initState();
-    _fetchUsername(); // Fetch the username when the page loads
+    _fetchUserData(); // Fetch the username and workout level when the page loads
   }
 
-  // Fetch the username from Firestore
-  Future<void> _fetchUsername() async {
+  // Fetch the username and workout level from Firestore
+  Future<void> _fetchUserData() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       try {
@@ -32,13 +34,18 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
             .get();
 
         if (userDoc.exists) {
-          setState(() {
-            username =
-                userDoc['name'] ?? 'User'; // Default to 'User' if not found
-          });
+          final fetchedWorkoutLevel =
+              userDoc['workoutLevelString'] ?? 'Moderate';
+
+          if (mounted) {
+            setState(() {
+              username = userDoc['name'] ?? 'User';
+              workoutLevel = fetchedWorkoutLevel;
+            });
+          }
         }
       } catch (e) {
-        print('Error fetching username: $e');
+        print('Error fetching user data: $e');
       }
     }
   }
@@ -88,16 +95,12 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
           const Spacer(),
-          IconButton(
-            icon: const Icon(Icons.menu, size: 28),
-            onPressed: () {}, // TODO: Add menu functionality
-          ),
+          MenuBarIcon(),
         ],
       ),
     );
   }
 
-  /// Build horizontal scrollable calendar
   Widget buildCalendar() {
     DateTime firstDayOfMonth =
         DateTime(selectedDate.year, selectedDate.month, 1);
@@ -123,28 +126,39 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
               width: 50,
               margin: const EdgeInsets.symmetric(horizontal: 4),
               decoration: BoxDecoration(
-                color: isSelected ? Colors.teal : Colors.grey[200],
-                borderRadius: BorderRadius.circular(8),
+                color: isSelected ? Colors.white : Colors.transparent,
+                borderRadius:
+                    BorderRadius.circular(16), // Increased border radius
               ),
               alignment: Alignment.center,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    DateFormat.E().format(date), // Short day name
+                    "${date.day}",
                     style: TextStyle(
-                      fontSize: 12,
-                      color: isSelected ? Colors.white : Colors.black,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: isSelected ? Colors.teal : Colors.black,
                     ),
                   ),
                   Text(
-                    "${date.day}",
+                    DateFormat.E().format(date), // Short day name
                     style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: isSelected ? Colors.white : Colors.black,
+                      fontSize: 12,
+                      color: isSelected ? Colors.teal : Colors.black,
                     ),
                   ),
+                  if (isSelected)
+                    Container(
+                      margin: const EdgeInsets.only(top: 4),
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.teal,
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -154,7 +168,45 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
     );
   }
 
-  /// Build workout plan card
+  // Build the workout level sentence
+  Widget buildWorkoutLevel() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // Dumbbell icon
+          Image.asset(
+            'assets/dumbell.png', // Ensure the image exists in assets folder
+            width: 24, // Adjust size as needed
+            height: 24,
+          ),
+          const SizedBox(width: 8), // Spacing between icon and text
+          RichText(
+            text: TextSpan(
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Colors.black, // Default text color
+              ),
+              children: [
+                const TextSpan(text: "Workout level : "), // Normal text
+                TextSpan(
+                  text: workoutLevel, // The variable part (e.g., "Moderate")
+                  style: const TextStyle(
+                    color: Colors
+                        .orange, // Set only the workout level text to orange
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   /// Build workout plan card with a toggleable checkmark
   Widget buildWorkoutPlanCard(Map<String, dynamic> data) {
     try {
@@ -171,14 +223,14 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
           return Container(
             margin: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              border: Border.all(color: Colors.teal, width: 2),
               borderRadius: BorderRadius.circular(8),
               color: isCompleted
                   ? Colors.green.withOpacity(0.3)
                   : Colors.teal.withOpacity(0.1),
             ),
             child: Padding(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.only(
+                  left: 20, top: 10, right: 10, bottom: 10),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -187,7 +239,10 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
                       const Text(
                         "WORKOUT PLAN",
                         style: TextStyle(
-                            fontSize: 18, fontWeight: FontWeight.bold),
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.teal, // Header color changed to teal
+                        ),
                       ),
                       const Spacer(),
                       IconButton(
@@ -213,7 +268,7 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
                       ),
                     ],
                   ),
-                  const Divider(),
+                  // Removed Divider here
                   _buildWorkoutSection(content),
                 ],
               ),
@@ -226,18 +281,26 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
     }
   }
 
-  /// Build workout section
   Widget _buildWorkoutSection(List<dynamic> exercises) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: exercises.map((exercise) {
         return Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: ListTile(
-            contentPadding: EdgeInsets.zero,
-            title: Text(exercise['exercise']),
-            subtitle:
-                Text("${exercise['duration']} mins • ${exercise['intensity']}"),
+          padding: const EdgeInsets.symmetric(vertical: 10), // Adjust spacing
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                exercise['exercise'],
+                style:
+                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              Text(
+                "${exercise['duration']} mins • ${exercise['intensity']}",
+                style: TextStyle(
+                    color: Colors.grey[700]), // Optional: Subtle color
+              ),
+            ],
           ),
         );
       }).toList(),
@@ -274,7 +337,7 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
                 Positioned.fill(
                   child: Image.asset(
                     'assets/workout.png', // Replace with your image path
-                    fit: BoxFit.fitWidth, // Ensures full width without cropping
+                    fit: BoxFit.none, // Ensures full width without cropping
                     alignment:
                         Alignment.topCenter, // Aligns the image from the top
                   ),
@@ -294,7 +357,7 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          buildWorkoutLevel(), // Add workout level before workout cards
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: getWorkoutPlansForDate(selectedDate),
@@ -311,7 +374,7 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
                 }
 
                 return ListView(
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.only(left: 10, right: 10),
                   children: snapshot.data!.docs.map((doc) {
                     return buildWorkoutPlanCard(
                         doc.data() as Map<String, dynamic>);
@@ -320,8 +383,12 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
               },
             ),
           ),
+          SizedBox(
+            height: 100,
+          )
         ],
       ),
+      backgroundColor: Colors.white,
     );
   }
 }
