@@ -3,7 +3,16 @@ from helpers import extract_json_from_response, get_user_biometric_data
 from plan_generation import generate_and_save_meal_plan, generate_and_save_workout_plan
 from llm_setup import qa_chain
 from config import *
-from vector_store import get_vector_store
+import logging
+
+# Configure logging to show DEBUG and higher-level messages
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler()  # Outputs to console
+    ]
+)
 
 SYSTEM_PROMPT = """You are a knowledgeable AI assistant specializing in nutrition, fitness, and general health. 
 Your primary tasks are:
@@ -40,7 +49,12 @@ def generate_nutrient_targets(biometric_data):
     )
     try:
         response = qa_chain.invoke(nutrient_prompt)
-        return extract_json_from_response(response['result'])
+        # DEBUG: Log raw LLM response for nutrient targets
+        logging.debug(f"Raw LLM response for nutrient targets: {response['result']}\n\n")
+        parsed_targets = extract_json_from_response(response['result'])
+        # DEBUG: Log parsed nutrient targets
+        logging.debug(f"Parsed nutrient targets: {parsed_targets}\n\n\n\n\n")
+        return parsed_targets
     except Exception as e:
         print(f"Error generating nutrient targets: {e}")
         return None
@@ -51,7 +65,6 @@ def call_rag_agent(query, userId):
     
     if is_meal_plan or is_workout_plan:
         memory = FirestoreMemory(userId)
-        conversation_history = memory.get_history()
         biometric_data = get_user_biometric_data(userId)
         messages = []
         
@@ -96,9 +109,16 @@ def call_rag_agent(query, userId):
                 f"- Low processed options"
             )
             
+            # DEBUG: Log nutrient query sent to retriever
+            logging.debug(f"Nutrient query for retrieval: {nutrient_query}\n\n")
+            
             # Retrieve relevant food items
             try:
                 retrieved_docs = qa_chain.retriever.invoke(nutrient_query)
+                
+                # DEBUG: Log retrieved food items from vector store
+                logging.debug(f"Retrieved food items for nutrient query: {[doc.page_content for doc in retrieved_docs]}\n\n\n\n\n")
+                
                 context_info = (
                     "Nutritional Context:\n" + 
                     "\n".join([doc.page_content for doc in retrieved_docs[:5]]) + 
@@ -109,13 +129,17 @@ def call_rag_agent(query, userId):
                 context_info = "Nutrition data unavailable."
 
             messages.append(generate_and_save_meal_plan(
-                userId, query, SYSTEM_PROMPT, biometric_info, context_info, conversation_history
+                userId, query, SYSTEM_PROMPT, biometric_info, context_info
             ))
 
         # Handle workout plan with original retrieval
         if is_workout_plan:
             try:
                 retrieved_docs = qa_chain.retriever.invoke(query)
+                
+                # DEBUG: Log retrieved documents for workout query
+                logging.debug(f"Retrieved documents for workout query: {[doc.page_content for doc in retrieved_docs]}")
+                
                 context_info = (
                     "Exercise Context:\n" + 
                     "\n".join([doc.page_content for doc in retrieved_docs[:3]])
@@ -125,7 +149,7 @@ def call_rag_agent(query, userId):
                 context_info = "Workout data unavailable."
 
             messages.append(generate_and_save_workout_plan(
-                userId, query, SYSTEM_PROMPT, biometric_info, context_info, conversation_history
+                userId, query, SYSTEM_PROMPT, biometric_info, context_info
             ))
 
         final_message = "\n".join(messages)
@@ -166,7 +190,13 @@ def call_rag_agent(query, userId):
                 "Use some related emojis to make the response more engaging and human-like.\n"
             )
             
+            # DEBUG: Log prompt for general question
+            logging.debug(f"Prompt for general question: {prompt}")
+            
             response = qa_chain.invoke(prompt)
+            
+            # DEBUG: Log raw LLM response for general question
+            logging.debug(f"Raw LLM response for general question: {response['result']}")
             final_response = response['result'].rstrip('\n')
             memory.append_to_history(query, final_response)
             return final_response

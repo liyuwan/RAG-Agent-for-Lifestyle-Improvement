@@ -13,7 +13,7 @@ def get_vector_store():
     if os.path.exists(PERSIST_DIRECTORY):
         print("Loading existing vector store...")
         vectordb = Chroma(persist_directory=PERSIST_DIRECTORY, embedding_function=embeddings)
-        retriever = vectordb.as_retriever(search_kwargs={"k": 5})
+        retriever = vectordb.as_retriever(search_kwargs={"k": 20})
         print("✅ Vector store loaded successfully!")
     else:
         print("Creating new vector store...")
@@ -24,5 +24,5 @@ def get_vector_store():
             batch = all_documents[i:i + BATCH_SIZE]
             vectordb.add_documents(batch)
         print("\n✅ Vector store creation completed!")
-        retriever = vectordb.as_retriever(search_kwargs={"k": 5})
+        retriever = vectordb.as_retriever(search_kwargs={"k": 20})
     return retriever, vectordb
