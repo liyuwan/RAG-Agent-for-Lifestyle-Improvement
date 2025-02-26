@@ -4,10 +4,9 @@ import 'package:rag_flutter_app/pages/meals_plan_page.dart';
 import 'package:rag_flutter_app/pages/progress_page.dart';
 import 'package:rag_flutter_app/pages/workout_plan_page.dart';
 
-
 class MainPage extends StatefulWidget {
   const MainPage({super.key});
-  
+
   @override
   State<MainPage> createState() => _MainPageState();
 }
@@ -33,7 +32,7 @@ class _MainPageState extends State<MainPage> {
     return Align(
       alignment: Alignment.bottomCenter,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 20, left: 45, right: 45),
+        margin: const EdgeInsets.only(bottom: 10, left: 45, right: 45),
         decoration: BoxDecoration(
           color: const Color(0xFF008080),
           borderRadius: BorderRadius.circular(40),
@@ -76,11 +75,14 @@ class _MainPageState extends State<MainPage> {
       },
       child: CircleAvatar(
         radius: 28,
-        backgroundColor: _selectedIndex == index ? Colors.white : const Color(0xFF81C0C0),
+        backgroundColor:
+            _selectedIndex == index ? Colors.white : const Color(0xFF81C0C0),
         child: Icon(
           icon,
           size: 30,
-          color: _selectedIndex == index ? const Color(0xFF008080) : Colors.white70,
+          color: _selectedIndex == index
+              ? const Color(0xFF008080)
+              : Colors.white70,
         ),
       ),
     );

@@ -1,8 +1,9 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:rag_flutter_app/pages/main_page.dart';
-import 'input_page.dart';
+import '/pages/input_page.dart';
+import '/pages/main_page.dart';
+import 'package:rag_flutter_app/services/auth_service.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -75,6 +76,47 @@ class _LoginPageState extends State<LoginPage> {
     }
 
     setState(() => _isLoading = false);
+  }
+
+  Future<void> _signInWithGoogle() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    // Sign in with Google
+    UserCredential? userCredential = await AuthService().signInWithGoogle();
+
+    setState(() {
+      _isLoading = false;
+    });
+
+    if (userCredential != null) {
+      // Check if the user already exists in Firestore
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userCredential.user!.uid)
+          .get();
+
+      // If the user document doesn't exist, they are a new user, so navigate to InputPage
+      if (!userDoc.exists) {
+        // Navigate to InputPage for first-time users
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const InputPage()),
+        );
+      } else {
+        // Otherwise, navigate to MainPage for existing users
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const MainPage()),
+        );
+      }
+    } else {
+      // Show an error message if sign-in fails or is canceled
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Google sign-in failed or was canceled')),
+      );
+    }
   }
 
   @override
@@ -177,6 +219,24 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ],
                 ),
+
+                const SizedBox(height: 25),
+                // Google sign in button
+                ElevatedButton(
+                  onPressed: _signInWithGoogle,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white, // White background
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12), // Rounded corners
+                    ),
+                    padding: const EdgeInsets.all(16), // Padding for the button
+                  ),
+                  child: Image.asset(
+                    'assets/google_logo.png', // Path to your image
+                    height: 32, // Set the height of the image
+                    width: 32, // Set the width of the image
+                  ),
+                )
             ],
           ),
         ),

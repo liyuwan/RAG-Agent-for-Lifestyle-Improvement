@@ -13,33 +13,35 @@ def generate_nutrient_context(targets):
         "Select foods from the following options:\n"
     )
 
-def generate_and_save_meal_plan(userId, query, SYSTEM_PROMPT, biometric_info, context_info, conversation_history):
+def generate_and_save_meal_plan(userId, query, SYSTEM_PROMPT, biometric_info, context_info):
     meal_instructions = (
-        "Create a varied meal plan following these rules:\n"
-        "1. Use MAXIMUM 2 servings of any single food item per day\n"
-        "2. Include different protein sources in each meal\n"
-        "3. Ensure vegetables/fruits in at least 2 meals\n"
-        "4. Total daily calories must match the nutritional targets\n"
-        "5. Never repeat the exact same food combination in multiple meals\n\n"
+        "Create a varied meal plan using the food items provided in the context, following these rules:\n"
+        "1. Use MAXIMUM 2 servings of any single food item per day across all meals combined (e.g., an item can appear in one meal once and another meal once, but never three times total).\n"
+        "2. Include different protein sources in each meal (e.g., beef in one, chicken in another).\n"
+        "3. Ensure vegetables or fruits are included in at least 2 meals.\n"
+        "4. Total daily calories must match the nutritional targets.\n"
+        "5. Never repeat the exact same combination of food items across multiple meals.\n"
+        "6. Avoid listing the same food item multiple times within a single meal unless necessary to meet nutritional targets—prioritize variety.\n\n"
+        "Each entry in 'food_items' represents one serving. Select foods from the provided context below.\n\n"
         "Format as JSON:\n"
-        '''{
-        "breakfast": {
-            "food_items": ["item1", "item2"],
-            "calories": number,
-            "protein_g": number,
-            "carbs_g": number,
-            "fats_g": number
-        },
-        "lunch": {...},
-        "dinner": {...},
-        "total_daily": {
-            "calories": number,
-            "protein_g": number,
-            "carbs_g": number,
-            "fats_g": number
-        }
-        }'''
-        "\nINCLUDE ONLY JSON! ADD NUTRITION BREAKDOWN PER MEAL!"
+        "{\n"
+        "  \"breakfast\": {\n"
+        "    \"food_items\": [\"item1\", \"item2\"],\n"
+        "    \"calories\": number,\n"
+        "    \"protein_g\": number,\n"
+        "    \"carbs_g\": number,\n"
+        "    \"fats_g\": number\n"
+        "  },\n"
+        "  \"lunch\": {...},\n"
+        "  \"dinner\": {...},\n"
+        "  \"total_daily\": {\n"
+        "    \"calories\": number,\n"
+        "    \"protein_g\": number,\n"
+        "    \"carbs_g\": number,\n"
+        "    \"fats_g\": number\n"
+        "  }\n"
+        "}\n"
+        "INCLUDE ONLY JSON! ADD NUTRITION BREAKDOWN PER MEAL!"
     )
     
     prompt = (
@@ -47,16 +49,18 @@ def generate_and_save_meal_plan(userId, query, SYSTEM_PROMPT, biometric_info, co
         f"Given the following context and user information, generate a meal plan in JSON format as instructed.\n\n"
         f"User Information:\n{biometric_info}\n"
         f"Relevant Context:\n{context_info}\n"
-        f"Conversation History:\n{conversation_history}\n\n"
         f"User Query: {query}\n\n"
         f"{meal_instructions}"
     )
+    
+    # DEBUG: Log prompt sent to LLM for meal plan generation
+    logging.debug(f"Prompt for meal plan generation: {prompt}\n\n\n")
     try:
         response = invoke_llm_with_retry(prompt)
-        logging.debug(f"Raw LLM response: {response}")
+        logging.debug(f"Raw LLM response: {response}\n\n\n")
         
         meal_plan = extract_json_from_response(response)
-        logging.debug(f"Parsed meal plan: {meal_plan}")
+        logging.debug(f"Parsed meal plan: {meal_plan}\n\n\n")
         
         if 'breakfast' in meal_plan:
             save_plan_to_firestore(userId, 'meal', json.dumps(meal_plan, indent=2))
@@ -65,7 +69,7 @@ def generate_and_save_meal_plan(userId, query, SYSTEM_PROMPT, biometric_info, co
         logging.error(f"Error in generating meal plan: {e}")
         return "Error generating meal plan. Please try again."
 
-def generate_and_save_workout_plan(userId, query,SYSTEM_PROMPT, biometric_info, context_info, conversation_history):
+def generate_and_save_workout_plan(userId, query,SYSTEM_PROMPT, biometric_info, context_info):
     workout_instructions = (
         "Please generate a workout plan in JSON format using the following format:\n\n"
         '''[
@@ -78,10 +82,12 @@ def generate_and_save_workout_plan(userId, query,SYSTEM_PROMPT, biometric_info, 
         f"Given the following context and user information, generate a workout plan in JSON format as instructed.\n\n"
         f"User Information:\n{biometric_info}\n"
         f"Relevant Context:\n{context_info}\n"
-        f"Conversation History:\n{conversation_history}\n\n"
         f"User Query: {query}\n\n"
         f"{workout_instructions}"
     )
+    
+    # DEBUG: Log prompt sent to LLM for workout plan generation
+    logging.debug(f"Prompt for workout plan generation: {prompt}")
     try:
         response = invoke_llm_with_retry(prompt)
         logging.debug(f"Raw LLM response: {response}")
