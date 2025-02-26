@@ -4,6 +4,7 @@ from plan_generation import generate_and_save_meal_plan, generate_and_save_worko
 from llm_setup import qa_chain
 from config import *
 import logging
+from transformers import pipeline
 
 # Configure logging to show DEBUG and higher-level messages
 logging.basicConfig(
@@ -14,6 +15,9 @@ logging.basicConfig(
     ]
 )
 
+# Initialize the intent classification pipeline
+intent_classifier = pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
+
 SYSTEM_PROMPT = """You are a knowledgeable AI assistant specializing in nutrition, fitness, and general health. 
 Your primary tasks are:
 1. Answer general questions about nutrition, fitness, and health with accurate, evidence-based information.
@@ -22,6 +26,9 @@ Your primary tasks are:
 For general questions:
 - Provide clear, concise, and evidence-based answers.
 - Avoid speculative statements and rely on established knowledge.
+- Use standard paragraph breaks for readability.
+- Make the paragraphs look good and engaging. Use diffetent text styles and lines as necessary instead of "*" for better readability.
+- Use appropriate formatting and emojis to enhance readability.
 
 For personalized plans:
 - Use the provided user-specific biometric data and context to create tailored meal and workout plans.
@@ -59,9 +66,16 @@ def generate_nutrient_targets(biometric_data):
         print(f"Error generating nutrient targets: {e}")
         return None
 
+def classify_intent(query):
+    candidate_labels = ["generate meal plan", "generate workout plan", "general question"]
+    result = intent_classifier(query, candidate_labels)
+    return result['labels'][0]
+
 def call_rag_agent(query, userId):
-    is_meal_plan = any(keyword in query.lower() for keyword in ['meal plan', 'meals plan', 'diet plan', 'nutrition plan'])
-    is_workout_plan = any(keyword in query.lower() for keyword in ['workout plan', 'exercise plan'])
+    intent = classify_intent(query)
+    
+    is_meal_plan = intent == "generate meal plan"
+    is_workout_plan = intent == "generate workout plan"
     
     if is_meal_plan or is_workout_plan:
         memory = FirestoreMemory(userId)

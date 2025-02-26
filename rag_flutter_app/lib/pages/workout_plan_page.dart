@@ -81,7 +81,7 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
 // Build user profile and menu section
   Widget buildProfileSection() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 10),
       child: Row(
         children: [
           CircleAvatar(
@@ -92,7 +92,7 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
           const SizedBox(width: 10),
           Text(
             "Welcome back!\n$username", // Display the username here
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
           ),
           const Spacer(),
           MenuBarIcon(),
@@ -108,62 +108,65 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
         DateTime(selectedDate.year, selectedDate.month + 1, 0);
     int todayIndex = selectedDate.day - 1;
 
-    return SizedBox(
-      height: 70,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: lastDayOfMonth.day,
-        controller: ScrollController(
-          initialScrollOffset: (todayIndex * 50).toDouble(),
-        ),
-        itemBuilder: (context, index) {
-          DateTime date = firstDayOfMonth.add(Duration(days: index));
-          bool isSelected = date.day == selectedDate.day;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 30),
+      child: SizedBox(
+        height: 70,
+        child: ListView.builder(
+          scrollDirection: Axis.horizontal,
+          itemCount: lastDayOfMonth.day,
+          controller: ScrollController(
+            initialScrollOffset: (todayIndex * 50).toDouble(),
+          ),
+          itemBuilder: (context, index) {
+            DateTime date = firstDayOfMonth.add(Duration(days: index));
+            bool isSelected = date.day == selectedDate.day;
 
-          return GestureDetector(
-            onTap: () => onDateSelected(date),
-            child: Container(
-              width: 50,
-              margin: const EdgeInsets.symmetric(horizontal: 4),
-              decoration: BoxDecoration(
-                color: isSelected ? Colors.white : Colors.transparent,
-                borderRadius:
-                    BorderRadius.circular(16), // Increased border radius
-              ),
-              alignment: Alignment.center,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    "${date.day}",
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: isSelected ? Colors.teal : Colors.black,
-                    ),
-                  ),
-                  Text(
-                    DateFormat.E().format(date), // Short day name
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: isSelected ? Colors.teal : Colors.black,
-                    ),
-                  ),
-                  if (isSelected)
-                    Container(
-                      margin: const EdgeInsets.only(top: 4),
-                      width: 6,
-                      height: 6,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.teal,
+            return GestureDetector(
+              onTap: () => onDateSelected(date),
+              child: Container(
+                width: 50,
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+                decoration: BoxDecoration(
+                  color: isSelected ? Colors.white : Colors.transparent,
+                  borderRadius:
+                      BorderRadius.circular(22), // Increased border radius
+                ),
+                alignment: Alignment.center,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      "${date.day}",
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w600,
+                        color: isSelected ? Colors.teal : Colors.black,
                       ),
                     ),
-                ],
+                    Text(
+                      DateFormat.E().format(date), // Short day name
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isSelected ? Colors.teal : Colors.black,
+                      ),
+                    ),
+                    if (isSelected)
+                      Container(
+                        margin: const EdgeInsets.only(top: 4),
+                        width: 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.teal,
+                        ),
+                      ),
+                  ],
+                ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }
@@ -171,21 +174,21 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
   // Build the workout level sentence
   Widget buildWorkoutLevel() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 20),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           // Dumbbell icon
           Image.asset(
             'assets/dumbell.png', // Ensure the image exists in assets folder
-            width: 24, // Adjust size as needed
-            height: 24,
+            width: 28, // Adjust size as needed
+            height: 28,
           ),
           const SizedBox(width: 8), // Spacing between icon and text
           RichText(
             text: TextSpan(
               style: const TextStyle(
-                fontSize: 18,
+                fontSize: 16,
                 fontWeight: FontWeight.w600,
                 color: Colors.black, // Default text color
               ),
@@ -223,25 +226,25 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
           return Container(
             margin: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(20),
               color: isCompleted
                   ? Colors.green.withOpacity(0.3)
                   : Colors.teal.withOpacity(0.1),
             ),
             child: Padding(
               padding: const EdgeInsets.only(
-                  left: 20, top: 10, right: 10, bottom: 10),
+                  left: 30, top: 10, right: 10, bottom: 10),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
                       const Text(
-                        "WORKOUT PLAN",
+                        "Workout Plan",
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: Colors.teal, // Header color changed to teal
+                          color: Color(0xFF008989), // Header color changed to teal
                         ),
                       ),
                       const Spacer(),
@@ -268,8 +271,10 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
                       ),
                     ],
                   ),
-                  // Removed Divider here
-                  _buildWorkoutSection(content),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 15),
+                    child: _buildWorkoutSection(content),
+                  ),
                 ],
               ),
             ),
@@ -293,7 +298,7 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
               Text(
                 exercise['exercise'],
                 style:
-                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    const TextStyle(fontWeight: FontWeight.w500, fontSize: 16),
               ),
               Text(
                 "${exercise['duration']} mins • ${exercise['intensity']}",
@@ -336,7 +341,7 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
                 // Background image (Positioned to align from top)
                 Positioned.fill(
                   child: Image.asset(
-                    'assets/workout.png', // Replace with your image path
+                    'assets/workout.png', // Image path
                     fit: BoxFit.none, // Ensures full width without cropping
                     alignment:
                         Alignment.topCenter, // Aligns the image from the top
@@ -346,10 +351,9 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
                 // Foreground content: Profile + Calendar, ensuring they fill the space
                 Column(
                   children: [
-                    const SizedBox(height: 40), // Adjust for status bar
+                    const SizedBox(height: 55), // Adjust for status bar
                     Expanded(
                         child: buildProfileSection()), // Make it take up space
-                    const SizedBox(height: 8),
                     Expanded(
                         child: buildCalendar()), // Ensure calendar fills space
                   ],
@@ -375,17 +379,17 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
 
                 return ListView(
                   padding: const EdgeInsets.only(left: 10, right: 10),
-                  children: snapshot.data!.docs.map((doc) {
-                    return buildWorkoutPlanCard(
-                        doc.data() as Map<String, dynamic>);
-                  }).toList(),
+                  children: [
+                    ...snapshot.data!.docs.map((doc) {
+                      return buildWorkoutPlanCard(
+                          doc.data() as Map<String, dynamic>);
+                    }),
+                    const SizedBox(height: 100), // Add some space at the end
+                  ],
                 );
               },
             ),
           ),
-          SizedBox(
-            height: 100,
-          )
         ],
       ),
       backgroundColor: Colors.white,
