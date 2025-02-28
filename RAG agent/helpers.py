@@ -56,12 +56,15 @@ def listen_for_audio():
         print("Error recognizing speech:", e)
         return None
 
-def save_plan_to_firestore(user_id, plan_type, plan_content):
+def save_plan_to_firestore(user_id, plan_type, plan_content, target_date):
+    plan_data = json.loads(plan_content)
+    
     plan_ref = db.collection('users').document(user_id).collection('plans').document()
     plan_ref.set({
         'type': plan_type.lower(),
         'content': plan_content,
         'date': firestore.SERVER_TIMESTAMP,
+        'target_date': target_date,
         'metadata': {
             'calories': None,
             'exercises': [],
@@ -74,11 +77,11 @@ def save_plan_to_firestore(user_id, plan_type, plan_content):
     plans = plans_query.stream()
     plan_ids = [plan.id for plan in plans]
 
-    # Keep only the latest 20 plans
-    if len(plan_ids) > 20:
-        for plan_id in plan_ids[20:]:
+    # Keep only the latest 42 plans (plans for 6 weeks)
+    if len(plan_ids) > 42:
+        for plan_id in plan_ids[42:]:
             db.collection('users').document(user_id).collection('plans').document(plan_id).delete()
-            
+
 def get_user_biometric_data(user_id):
     try:
         user_doc = db.collection('users').document(user_id).get()

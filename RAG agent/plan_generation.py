@@ -1,7 +1,9 @@
 # plan_generation.py
 import json
 import logging
+from datetime import datetime, timedelta
 from helpers import invoke_llm_with_retry, extract_json_from_response, save_plan_to_firestore
+from google.cloud import firestore
 
 def generate_nutrient_context(targets):
     return (
@@ -44,32 +46,49 @@ def generate_and_save_meal_plan(userId, query, SYSTEM_PROMPT, biometric_info, co
         "INCLUDE ONLY JSON! ADD NUTRITION BREAKDOWN PER MEAL!"
     )
     
-    prompt = (
-        f"System Instructions:\n{SYSTEM_PROMPT}\n\n"
-        f"Given the following context and user information, generate a meal plan in JSON format as instructed.\n\n"
-        f"User Information:\n{biometric_info}\n"
-        f"Relevant Context:\n{context_info}\n"
-        f"User Query: {query}\n\n"
-        f"{meal_instructions}"
-    )
+    weekly_meal_plans = []
+    start_date = datetime.now()
     
-    # DEBUG: Log prompt sent to LLM for meal plan generation
-    logging.debug(f"Prompt for meal plan generation: {prompt}\n\n\n")
-    try:
-        response = invoke_llm_with_retry(prompt)
-        logging.debug(f"Raw LLM response: {response}\n\n\n")
+    for day in range(7):
+        prompt = (
+            f"System Instructions:\n{SYSTEM_PROMPT}\n\n"
+            f"Given the following context and user information, generate a meal plan in JSON format as instructed.\n\n"
+            f"User Information:\n{biometric_info}\n"
+            f"Relevant Context:\n{context_info}\n"
+            f"User Query: {query}\n\n"
+            f"{meal_instructions}"
+        )
         
-        meal_plan = extract_json_from_response(response)
-        logging.debug(f"Parsed meal plan: {meal_plan}\n\n\n")
-        
-        if 'breakfast' in meal_plan:
-            save_plan_to_firestore(userId, 'meal', json.dumps(meal_plan, indent=2))
-        return "Your meal plan has been updated! 🥗 Check the 'Meals Plan' page to view it."
-    except Exception as e:
-        logging.error(f"Error in generating meal plan: {e}")
-        return "Error generating meal plan. Please try again."
+        # DEBUG: Log prompt sent to LLM for meal plan generation
+        logging.debug(f"Prompt for meal plan generation (Day {day + 1}): {prompt}\n\n\n")
+        try:
+            response = invoke_llm_with_retry(prompt)
+            logging.debug(f"Raw LLM response (Day {day + 1}): {response}\n\n\n")
+            
+            meal_plan = extract_json_from_response(response)
+            logging.debug(f"Parsed meal plan (Day {day + 1}): {meal_plan}\n\n\n")
+            
+            if 'breakfast' in meal_plan:
+                target_date = start_date + timedelta(days=day)
+                meal_plan_data = {
+                    'meal_plan': meal_plan,
+                    'target_date': target_date
+                }
+                weekly_meal_plans.append(meal_plan_data)
+        except Exception as e:
+            logging.error(f"Error in generating meal plan for day {day + 1}: {e}")
+            return "Error generating meal plan. Please try again."
+    
+    if weekly_meal_plans:
+        for meal_plan_data in weekly_meal_plans:
+            # Remove target_date from meal_plan content
+            meal_plan_content = meal_plan_data['meal_plan']
+            save_plan_to_firestore(userId, 'meal', json.dumps(meal_plan_content, indent=2), meal_plan_data['target_date'])
+        return "Your weekly meal plan has been updated! 🥗 Check the 'Meals Plan' page to view it."
+    else:
+        return "Error generating weekly meal plan. Please try again."
 
-def generate_and_save_workout_plan(userId, query,SYSTEM_PROMPT, biometric_info, context_info):
+def generate_and_save_workout_plan(userId, query, SYSTEM_PROMPT, biometric_info, context_info):
     workout_instructions = (
         "Please generate a workout plan in JSON format using the following format:\n\n"
         '''[
@@ -77,27 +96,45 @@ def generate_and_save_workout_plan(userId, query,SYSTEM_PROMPT, biometric_info, 
         ]'''
         "\nINCLUDE ONLY THE JSON WITH NO ADDITIONAL TEXT!\n"
     )
-    prompt = (
-        f"System Instructions:\n{SYSTEM_PROMPT}\n\n"
-        f"Given the following context and user information, generate a workout plan in JSON format as instructed.\n\n"
-        f"User Information:\n{biometric_info}\n"
-        f"Relevant Context:\n{context_info}\n"
-        f"User Query: {query}\n\n"
-        f"{workout_instructions}"
-    )
     
-    # DEBUG: Log prompt sent to LLM for workout plan generation
-    logging.debug(f"Prompt for workout plan generation: {prompt}")
-    try:
-        response = invoke_llm_with_retry(prompt)
-        logging.debug(f"Raw LLM response: {response}")
+    weekly_workout_plans = []
+    start_date = datetime.now()
+    
+    for day in range(7):
+        prompt = (
+            f"System Instructions:\n{SYSTEM_PROMPT}\n\n"
+            f"Given the following context and user information, generate a workout plan in JSON format as instructed.\n\n"
+            f"User Information:\n{biometric_info}\n"
+            f"Relevant Context:\n{context_info}\n"
+            f"User Query: {query}\n\n"
+            f"{workout_instructions}"
+        )
         
-        workout_plan = extract_json_from_response(response)
-        logging.debug(f"Parsed workout plan: {workout_plan}")
-        
-        if isinstance(workout_plan, list) and workout_plan:
-            save_plan_to_firestore(userId, 'workout', json.dumps(workout_plan, indent=2))
-        return "Workout plan updated. 💪 Please check your workout plan page."
-    except Exception as e:
-        logging.error(f"Error in generating workout plan: {e}")
-        return "Error generating workout plan. Please try again."
+        # DEBUG: Log prompt sent to LLM for workout plan generation
+        logging.debug(f"Prompt for workout plan generation (Day {day + 1}): {prompt}\n\n\n")
+        try:
+            response = invoke_llm_with_retry(prompt)
+            logging.debug(f"Raw LLM response (Day {day + 1}): {response}\n\n\n")
+            
+            workout_plan = extract_json_from_response(response)
+            logging.debug(f"Parsed workout plan (Day {day + 1}): {workout_plan}\n\n\n")
+            
+            if workout_plan:
+                target_date = start_date + timedelta(days=day)
+                workout_plan_data = {
+                    'workout_plan': workout_plan,
+                    'target_date': target_date
+                }
+                weekly_workout_plans.append(workout_plan_data)
+        except Exception as e:
+            logging.error(f"Error in generating workout plan for day {day + 1}: {e}")
+            return "Error generating workout plan. Please try again."
+    
+    if weekly_workout_plans:
+        for workout_plan_data in weekly_workout_plans:
+            # Remove target_date from workout_plan content
+            workout_plan_content = workout_plan_data['workout_plan']
+            save_plan_to_firestore(userId, 'workout', json.dumps(workout_plan_content, indent=2), workout_plan_data['target_date'])
+        return "Your weekly workout plan has been updated! 💪 Check the 'Workout Plan' page to view it."
+    else:
+        return "Error generating weekly workout plan. Please try again."

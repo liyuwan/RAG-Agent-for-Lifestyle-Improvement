@@ -66,8 +66,10 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
         .doc(user.uid)
         .collection('plans')
         .where('type', isEqualTo: 'workout')
-        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
-        .where('date', isLessThanOrEqualTo: Timestamp.fromDate(endOfDay))
+        .where('target_date', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
+        .where('target_date', isLessThanOrEqualTo: Timestamp.fromDate(endOfDay))
+        .orderBy('target_date', descending: true)
+        .limit(1)
         .snapshots();
   }
 
@@ -78,10 +80,10 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
     });
   }
 
-// Build user profile and menu section
+  // Build user profile and menu section
   Widget buildProfileSection() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 25),
       child: Row(
         children: [
           CircleAvatar(
@@ -102,79 +104,112 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
   }
 
   Widget buildCalendar() {
-    DateTime firstDayOfMonth =
-        DateTime(selectedDate.year, selectedDate.month, 1);
-    DateTime lastDayOfMonth =
-        DateTime(selectedDate.year, selectedDate.month + 1, 0);
-    int todayIndex = selectedDate.day - 1;
+    // Calculate the first and last day of the current month
+    DateTime now = DateTime.now();
+    DateTime firstDayOfCurrentMonth = DateTime(now.year, now.month, 1);
+    DateTime lastDayOfCurrentMonth = DateTime(now.year, now.month + 1, 0);
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 30),
-      child: SizedBox(
-        height: 70,
-        child: ListView.builder(
-          scrollDirection: Axis.horizontal,
-          itemCount: lastDayOfMonth.day,
-          controller: ScrollController(
-            initialScrollOffset: (todayIndex * 50).toDouble(),
+    // Calculate the first and last day of the next month
+    DateTime firstDayOfNextMonth = DateTime(now.year, now.month + 1, 1);
+    DateTime lastDayOfNextMonth = DateTime(now.year, now.month + 2, 0);
+
+    // Calculate the total number of days to display
+    int totalDays = lastDayOfCurrentMonth.day + lastDayOfNextMonth.day;
+
+    // Calculate the index of the selected date
+    int todayIndex = selectedDate.isBefore(firstDayOfNextMonth)
+        ? selectedDate.day - 1
+        : lastDayOfCurrentMonth.day + selectedDate.day - 1;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 35, top: 15, bottom: 8),
+          child: Text(
+            DateFormat.yMMMM().format(selectedDate),
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: Colors.teal,
+            ),
           ),
-          itemBuilder: (context, index) {
-            DateTime date = firstDayOfMonth.add(Duration(days: index));
-            bool isSelected = date.day == selectedDate.day;
-
-            return GestureDetector(
-              onTap: () => onDateSelected(date),
-              child: Container(
-                width: 50,
-                margin: const EdgeInsets.symmetric(horizontal: 4),
-                decoration: BoxDecoration(
-                  color: isSelected ? Colors.white : Colors.transparent,
-                  borderRadius:
-                      BorderRadius.circular(22), // Increased border radius
-                ),
-                alignment: Alignment.center,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      "${date.day}",
-                      style: TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w600,
-                        color: isSelected ? Colors.teal : Colors.black,
-                      ),
-                    ),
-                    Text(
-                      DateFormat.E().format(date), // Short day name
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: isSelected ? Colors.teal : Colors.black,
-                      ),
-                    ),
-                    if (isSelected)
-                      Container(
-                        margin: const EdgeInsets.only(top: 4),
-                        width: 6,
-                        height: 6,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.teal,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            );
-          },
         ),
-      ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 30),
+          child: SizedBox(
+            height: 70,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: totalDays,
+              controller: ScrollController(
+                initialScrollOffset: (todayIndex * 50).toDouble() - MediaQuery.of(context).size.width / 2 + 25,
+              ),
+              itemBuilder: (context, index) {
+                DateTime date;
+                if (index < lastDayOfCurrentMonth.day) {
+                  date = firstDayOfCurrentMonth.add(Duration(days: index));
+                } else {
+                  date = firstDayOfNextMonth.add(Duration(days: index - lastDayOfCurrentMonth.day));
+                }
+
+                bool isSelected = date.day == selectedDate.day && date.month == selectedDate.month && date.year == selectedDate.year;
+                bool isToday = date.day == DateTime.now().day && date.month == DateTime.now().month && date.year == DateTime.now().year;
+
+                return GestureDetector(
+                  onTap: () => onDateSelected(date),
+                  child: Container(
+                    width: 50,
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    decoration: BoxDecoration(
+                      color: isSelected ? Colors.white : Colors.transparent,
+                      borderRadius: BorderRadius.circular(22), // Increased border radius
+                    ),
+                    alignment: Alignment.center,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          "${date.day}",
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w600,
+                            color: isSelected ? Colors.teal : (isToday ? Colors.teal : Colors.black),
+                          ),
+                        ),
+                        Text( 
+                          DateFormat.E().format(date), // Short day name
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isSelected ? Colors.teal : (isToday ? Colors.teal : Colors.black),
+                          ),
+                        ),
+                        if (isSelected)
+                          Container(
+                            margin: const EdgeInsets.only(top: 4),
+                            width: 6,
+                            height: 6,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.teal,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+      ],
     );
   }
 
   // Build the workout level sentence
   Widget buildWorkoutLevel() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 10),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
@@ -197,8 +232,7 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
                 TextSpan(
                   text: workoutLevel, // The variable part (e.g., "Moderate")
                   style: const TextStyle(
-                    color: Colors
-                        .orange, // Set only the workout level text to orange
+                    color: Colors.orangeAccent, // Set only the workout level text to orange
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -229,7 +263,7 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
               borderRadius: BorderRadius.circular(20),
               color: isCompleted
                   ? Colors.green.withOpacity(0.3)
-                  : Colors.teal.withOpacity(0.1),
+                  : Colors.tealAccent.withOpacity(0.1),
             ),
             child: Padding(
               padding: const EdgeInsets.only(
@@ -334,7 +368,7 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
         children: [
           // Section covering 30% of the screen with a background image
           SizedBox(
-            height: screenHeight * 0.25, // Ensuring full 25% height
+            height: screenHeight * 0.25, 
             child: Stack(
               fit: StackFit.expand,
               children: [
@@ -352,10 +386,8 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
                 Column(
                   children: [
                     const SizedBox(height: 55), // Adjust for status bar
-                    Expanded(
-                        child: buildProfileSection()), // Make it take up space
-                    Expanded(
-                        child: buildCalendar()), // Ensure calendar fills space
+                    buildProfileSection(), // Make it take up space
+                    buildCalendar(), // Ensure calendar fills space
                   ],
                 ),
               ],
