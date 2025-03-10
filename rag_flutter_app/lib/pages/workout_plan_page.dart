@@ -83,18 +83,12 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
   // Build user profile and menu section
   Widget buildProfileSection() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 25),
+      padding: const EdgeInsets.symmetric(horizontal: 35),
       child: Row(
         children: [
-          CircleAvatar(
-            radius: 20,
-            backgroundColor: Colors.teal,
-            child: Icon(Icons.person, color: Colors.white),
-          ),
-          const SizedBox(width: 10),
           Text(
-            "Welcome back!\n$username", // Display the username here
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+            "Welcome back,\n$username", // Display the username here
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.grey[200]),
           ),
           const Spacer(),
           MenuBarIcon(),
@@ -129,9 +123,9 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
           child: Text(
             DateFormat.yMMMM().format(selectedDate),
             style: TextStyle(
-              fontSize: 15,
+              fontSize: 17, // Increased font size
               fontWeight: FontWeight.bold,
-              color: Colors.teal,
+              color: Colors.lightGreenAccent, // Darker text color
             ),
           ),
         ),
@@ -163,7 +157,7 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
                     margin: const EdgeInsets.symmetric(horizontal: 4),
                     decoration: BoxDecoration(
                       color: isSelected ? Colors.white : Colors.transparent,
-                      borderRadius: BorderRadius.circular(22), // Increased border radius
+                      borderRadius: BorderRadius.circular(16), // Increased border radius
                     ),
                     alignment: Alignment.center,
                     child: Column(
@@ -174,14 +168,14 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
                           style: TextStyle(
                             fontSize: 17,
                             fontWeight: FontWeight.w600,
-                            color: isSelected ? Colors.teal : (isToday ? Colors.teal : Colors.black),
+                            color: isSelected ? Colors.lightGreen : (isToday ? Colors.deepOrange[400] : Colors.black),
                           ),
                         ),
                         Text( 
                           DateFormat.E().format(date), // Short day name
                           style: TextStyle(
                             fontSize: 12,
-                            color: isSelected ? Colors.teal : (isToday ? Colors.teal : Colors.black),
+                            color: isSelected ? Colors.lightGreen : (isToday ? Colors.deepOrange[300] : Colors.black),
                           ),
                         ),
                         if (isSelected)
@@ -191,7 +185,7 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
                             height: 6,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: Colors.teal,
+                              color: Colors.grey[300],
                             ),
                           ),
                       ],
@@ -218,6 +212,7 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
             'assets/dumbell.png', // Ensure the image exists in assets folder
             width: 28, // Adjust size as needed
             height: 28,
+            color: Colors.deepOrangeAccent,
           ),
           const SizedBox(width: 8), // Spacing between icon and text
           RichText(
@@ -231,8 +226,8 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
                 const TextSpan(text: "Workout level : "), // Normal text
                 TextSpan(
                   text: workoutLevel, // The variable part (e.g., "Moderate")
-                  style: const TextStyle(
-                    color: Colors.orangeAccent, // Set only the workout level text to orange
+                  style: TextStyle(
+                    color: Colors.orange[400], // Set only the workout level text to orange
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -263,7 +258,7 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
               borderRadius: BorderRadius.circular(20),
               color: isCompleted
                   ? Colors.green.withOpacity(0.3)
-                  : Colors.teal[50],
+                  : Colors.blueGrey[50],
             ),
             child: Padding(
               padding: const EdgeInsets.only(
@@ -278,7 +273,7 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF008989), // Header color changed to teal
+                          color: Colors.lightGreen, // Header color changed to teal
                         ),
                       ),
                       const Spacer(),
