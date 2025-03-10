@@ -370,7 +370,7 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
                 // Background image (Positioned to align from top)
                 Positioned.fill(
                   child: Image.asset(
-                    'assets/workout.png', // Image path
+                    'assets/workoutplan-banner.png', // Image path
                     fit: BoxFit.none, // Ensures full width without cropping
                     alignment:
                         Alignment.topCenter, // Aligns the image from the top
