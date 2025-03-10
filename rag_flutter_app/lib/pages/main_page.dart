@@ -50,7 +50,7 @@ class _MainPageState extends State<MainPage> {
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               _buildNavItem(Icons.restaurant, 0),
-              _buildNavItem(Icons.fitness_center_outlined, 1),
+              _buildNavItemWithImage('assets/dumbell.png', 1),
               _buildNavItem(Icons.bar_chart, 2),
               _buildNavItem(Icons.chat_bubble_outline_rounded, 3),
             ],
@@ -83,6 +83,30 @@ class _MainPageState extends State<MainPage> {
           color: _selectedIndex == index
               ? const Color(0xFF008080)
               : Colors.white70,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItemWithImage(String imagePath, int index) {
+    return GestureDetector(
+      onTap: () {
+        _onItemTapped(index);
+      },
+      child: CircleAvatar(
+        radius: 28,
+        backgroundColor:
+            _selectedIndex == index ? Colors.white : const Color(0xFF81C0C0),
+        child: Transform.rotate(
+          angle: 3.14 / 2, // Rotate 90 degrees (π/2 radians)
+          child: Image.asset(
+            imagePath,
+            width: 30,
+            height: 30,
+            color: _selectedIndex == index
+                ? const Color(0xFF008080)
+                : Colors.white70,
+          ),
         ),
       ),
     );

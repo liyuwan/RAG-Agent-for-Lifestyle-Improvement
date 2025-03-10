@@ -64,7 +64,7 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
     return FirebaseFirestore.instance
         .collection('users')
         .doc(user.uid)
-        .collection('plans')
+        .collection('workout_plans')
         .where('type', isEqualTo: 'workout')
         .where('target_date', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
         .where('target_date', isLessThanOrEqualTo: Timestamp.fromDate(endOfDay))
@@ -263,7 +263,7 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
               borderRadius: BorderRadius.circular(20),
               color: isCompleted
                   ? Colors.green.withOpacity(0.3)
-                  : Colors.tealAccent.withOpacity(0.1),
+                  : Colors.teal[50],
             ),
             child: Padding(
               padding: const EdgeInsets.only(

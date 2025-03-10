@@ -59,7 +59,15 @@ def listen_for_audio():
 def save_plan_to_firestore(user_id, plan_type, plan_content, target_date):
     plan_data = json.loads(plan_content)
     
-    plan_ref = db.collection('users').document(user_id).collection('plans').document()
+    # Determine the collection based on the plan type
+    if plan_type.lower() == 'meal':
+        collection_name = 'meal_plans'
+    elif plan_type.lower() == 'workout':
+        collection_name = 'workout_plans'
+    else:
+        collection_name = 'other_plans'  # Default collection for other plan types
+
+    plan_ref = db.collection('users').document(user_id).collection(collection_name).document()
     plan_ref.set({
         'type': plan_type.lower(),
         'content': plan_content,
@@ -73,14 +81,14 @@ def save_plan_to_firestore(user_id, plan_type, plan_content, target_date):
     })
 
     # Retrieve all plans and sort by date
-    plans_query = db.collection('users').document(user_id).collection('plans').order_by('date', direction=firestore.Query.DESCENDING)
+    plans_query = db.collection('users').document(user_id).collection(collection_name).order_by('date', direction=firestore.Query.DESCENDING)
     plans = plans_query.stream()
     plan_ids = [plan.id for plan in plans]
 
     # Keep only the latest 42 plans (plans for 6 weeks)
     if len(plan_ids) > 42:
         for plan_id in plan_ids[42:]:
-            db.collection('users').document(user_id).collection('plans').document(plan_id).delete()
+            db.collection('users').document(user_id).collection(collection_name).document(plan_id).delete()
 
 def get_user_biometric_data(user_id):
     try:
