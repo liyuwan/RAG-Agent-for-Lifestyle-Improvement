@@ -26,6 +26,7 @@ dependencies:
   firebase_storage: ^12.4.2
   intl: ^0.18.1
   google_sign_in: ^6.2.2
+  fl_chart: ^0.70.2
 
 dev_dependencies:
   flutter_test:
@@ -44,3 +45,4 @@ flutter:
     - assets/login_logo.png
     - assets/mealplan-banner.png
     - assets/workoutplan-banner.png
+    - assets/achievements.png

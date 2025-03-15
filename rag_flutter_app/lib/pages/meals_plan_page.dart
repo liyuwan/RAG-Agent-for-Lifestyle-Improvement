@@ -16,11 +16,13 @@ class _MealsPlanPageState extends State<MealsPlanPage> {
   DateTime selectedDate = DateTime.now();
   String username = '';
   int _totalCalories = 0;
+  int caloriesConsumed = 0;
+  Map<String, bool> _completedMeals = {};
 
   @override
   void initState() {
     super.initState();
-    _fetchUserData(); // Fetch the username when the page loads
+    _fetchUserData(); // Fetch the username and calories consumed data when the page loads
   }
 
   // Fetch the username from Firestore
@@ -36,6 +38,20 @@ class _MealsPlanPageState extends State<MealsPlanPage> {
           setState(() {
             username = userDoc['name'] ?? 'User';
           });
+
+          final caloriesDoc = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .collection('calories_consumed')
+              .doc(DateFormat('yyyy-MM-dd').format(selectedDate))
+              .get();
+
+          if (caloriesDoc.exists) {
+            setState(() {
+              caloriesConsumed = caloriesDoc['calories_consumed'] ?? 0;
+              _completedMeals = Map<String, bool>.from(caloriesDoc['completed_meals'] ?? {});
+            });
+          }
         }
       } catch (e) {
         print('Error fetching user data: $e');
@@ -69,6 +85,7 @@ class _MealsPlanPageState extends State<MealsPlanPage> {
     setState(() {
       selectedDate = date;
     });
+    _fetchUserData(); // Fetch the calories consumed data for the selected date
   }
 
   int _calculateTotalCalories(Map<String, dynamic> content) {
@@ -89,7 +106,7 @@ class _MealsPlanPageState extends State<MealsPlanPage> {
         children: [
           Text(
             "Welcome back,\n$username", // Display the username here
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.grey[800]),
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.black),
           ),
           const Spacer(),
           MenuBarIcon(),
@@ -120,20 +137,9 @@ class _MealsPlanPageState extends State<MealsPlanPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.only(left: 35, top: 15, bottom: 8),
-          child: Text(
-            DateFormat.yMMMM().format(selectedDate),
-            style: TextStyle(
-              fontSize: 17, // Increased font size
-              fontWeight: FontWeight.bold,
-              color: Colors.black,
-            ),
-          ),
-        ),
-        Padding(
           padding: const EdgeInsets.symmetric(horizontal: 30),
           child: SizedBox(
-            height: 70,
+            height: 90, // Increased height to accommodate the month text
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               itemCount: totalDays,
@@ -154,16 +160,23 @@ class _MealsPlanPageState extends State<MealsPlanPage> {
                 return GestureDetector(
                   onTap: () => onDateSelected(date),
                   child: Container(
-                    width: 50,
+                    width: 60,
                     margin: const EdgeInsets.symmetric(horizontal: 4),
                     decoration: BoxDecoration(
                       color: isSelected ? Colors.white : Colors.transparent,
-                      borderRadius: BorderRadius.circular(16), // Increased border radius
+                      borderRadius: BorderRadius.circular(28), // Increased border radius
                     ),
                     alignment: Alignment.center,
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
+                        Text(
+                          DateFormat.MMM().format(date), // Short month name
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isSelected ? Colors.teal : (isToday ? Colors.deepOrange[300] : Colors.black),
+                          ),
+                        ),
                         Text(
                           "${date.day}",
                           style: TextStyle(
@@ -172,7 +185,7 @@ class _MealsPlanPageState extends State<MealsPlanPage> {
                             color: isSelected ? Colors.teal : (isToday ? Colors.deepOrange[400] : Colors.black),
                           ),
                         ),
-                        Text( 
+                        Text(
                           DateFormat.E().format(date), // Short day name
                           style: TextStyle(
                             fontSize: 12,
@@ -201,68 +214,123 @@ class _MealsPlanPageState extends State<MealsPlanPage> {
     );
   }
 
+  Future<void> _saveCaloriesConsumed() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('calories_consumed')
+            .doc(DateFormat('yyyy-MM-dd').format(selectedDate))
+            .set({
+          'date': Timestamp.fromDate(selectedDate),
+          'calories_consumed': caloriesConsumed,
+          'completed_meals': _completedMeals,
+        });
+      } catch (e) {
+        print('Error saving calories consumed: $e');
+      }
+    }
+  }
+
   Widget _buildMealCard(String title, dynamic data, IconData icon) {
     if (data == null) return SizedBox.shrink();
 
-    return Card(
-      margin: EdgeInsets.symmetric(vertical: 10, horizontal: 16),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      color: Colors.teal[50],
-      elevation: 0,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            // Upper part: icon and text side by side.
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center, // Center the icon vertically
+    bool isToday = selectedDate.day == DateTime.now().day &&
+        selectedDate.month == DateTime.now().month &&
+        selectedDate.year == DateTime.now().year;
+
+    return StatefulBuilder(
+      builder: (BuildContext context, StateSetter setState) {
+        bool isCompleted = _completedMeals[title] ?? false;
+
+        return Card(
+          margin: EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          color: Colors.teal[50],
+          elevation: 0,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Stack(
               children: [
-                SizedBox(width: 10),
-                Icon(icon, color: Colors.grey[700], size: 28),
-                SizedBox(width: 25),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: TextStyle(fontWeight: FontWeight.w500, fontSize: 17),
-                      ),
-                      SizedBox(height: 8),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: (data['food_items'] as List)
-                            .map<Widget>(
-                              (item) => Padding(
-                                padding: EdgeInsets.only(bottom: 4),
-                                child: Text(item, style: TextStyle(fontSize: 13)),
+                Column(
+                  children: [
+                    // Upper part: icon and text side by side.
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center, // Center the icon vertically
+                      children: [
+                        SizedBox(width: 10),
+                        Icon(icon, color: Colors.grey[700], size: 28),
+                        SizedBox(width: 25),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                title,
+                                style: TextStyle(fontWeight: FontWeight.w500, fontSize: 17),
                               ),
-                            )
-                            .toList(),
+                              SizedBox(height: 8),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: (data['food_items'] as List)
+                                    .map<Widget>(
+                                      (item) => Padding(
+                                        padding: EdgeInsets.only(bottom: 4),
+                                        child: Text(item, style: TextStyle(fontSize: 13)),
+                                      ),
+                                    )
+                                    .toList(),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 16),
+                    Divider(color: Colors.white70, thickness: 3,),
+                    SizedBox(height: 8),
+                    // Lower part: calories information
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.local_fire_department_outlined, color: Colors.black87),
+                        SizedBox(width: 4),
+                        Text(
+                          "${data['calories']} kcal",
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                if (isToday)
+                  Positioned(
+                    top: -15,
+                    right: -10,
+                      child: Checkbox(
+                        shape: CircleBorder(),
+                        value: isCompleted,
+                        activeColor: Colors.teal,
+                        onChanged: (bool? value) {
+                          setState(() {
+                            _completedMeals[title] = value ?? false;
+                            if (value == true) {
+                              caloriesConsumed += data['calories'] as int;
+                            } else {
+                              caloriesConsumed -= data['calories'] as int;
+                            }
+                            _saveCaloriesConsumed(); // Save the data to Firestore
+                          });
+                        },
                       ),
-                    ],
                   ),
-                ),
               ],
             ),
-            SizedBox(height: 16),
-            Divider(color: Colors.white70, thickness: 3,),
-            SizedBox(height: 8),
-            // Lower part: calories information
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.local_fire_department_outlined, color: Colors.black87),
-                SizedBox(width: 4),
-                Text(
-                  "${data['calories']} kcal",
-                  style: TextStyle(fontWeight: FontWeight.w600),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -293,6 +361,7 @@ class _MealsPlanPageState extends State<MealsPlanPage> {
                   children: [
                     const SizedBox(height: 55),
                     buildProfileSection(),
+                    const SizedBox(height: 22),
                     buildCalendar(),
                   ],
                 ),

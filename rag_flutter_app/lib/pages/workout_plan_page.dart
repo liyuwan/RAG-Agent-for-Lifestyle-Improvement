@@ -88,7 +88,7 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
         children: [
           Text(
             "Welcome back,\n$username", // Display the username here
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.grey[200]),
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.grey[200]),
           ),
           const Spacer(),
           MenuBarIcon(),
@@ -119,20 +119,9 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.only(left: 35, top: 15, bottom: 8),
-          child: Text(
-            DateFormat.yMMMM().format(selectedDate),
-            style: TextStyle(
-              fontSize: 17, // Increased font size
-              fontWeight: FontWeight.bold,
-              color: Colors.lightGreenAccent, // Darker text color
-            ),
-          ),
-        ),
-        Padding(
           padding: const EdgeInsets.symmetric(horizontal: 30),
           child: SizedBox(
-            height: 70,
+            height: 90,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               itemCount: totalDays,
@@ -153,16 +142,23 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
                 return GestureDetector(
                   onTap: () => onDateSelected(date),
                   child: Container(
-                    width: 50,
+                    width: 60,
                     margin: const EdgeInsets.symmetric(horizontal: 4),
                     decoration: BoxDecoration(
                       color: isSelected ? Colors.white : Colors.transparent,
-                      borderRadius: BorderRadius.circular(16), // Increased border radius
+                      borderRadius: BorderRadius.circular(28), // Increased border radius
                     ),
                     alignment: Alignment.center,
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
+                        Text(
+                          DateFormat.MMM().format(date), // Short month name
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isSelected ? Colors.lightGreen : (isToday ? Colors.deepOrange[300] : Colors.black),
+                          ),
+                        ),
                         Text(
                           "${date.day}",
                           style: TextStyle(
@@ -245,70 +241,34 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
       final rawContent = data['content'];
       final content =
           rawContent is String ? jsonDecode(rawContent) : rawContent;
-      final docId =
-          data['id']; // Assuming Firestore doc ID is stored in the data
 
-      return StatefulBuilder(
-        builder: (context, setState) {
-          bool isCompleted = data['completed'] ?? false; // Default to false
-
-          return Container(
-            margin: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              color: isCompleted
-                  ? Colors.green.withOpacity(0.3)
-                  : Colors.blueGrey[50],
-            ),
-            child: Padding(
-              padding: const EdgeInsets.only(
-                  left: 30, top: 10, right: 10, bottom: 10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Text(
-                        "Workout Plan",
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.lightGreen, // Header color changed to teal
-                        ),
-                      ),
-                      const Spacer(),
-                      IconButton(
-                        icon: Icon(
-                          isCompleted
-                              ? Icons.check_circle
-                              : Icons.radio_button_unchecked,
-                          color: isCompleted ? Colors.green : Colors.grey,
-                          size: 28,
-                        ),
-                        onPressed: () {
-                          setState(() {
-                            isCompleted = !isCompleted;
-                          });
-                          // Update Firestore when toggled
-                          FirebaseFirestore.instance
-                              .collection('users')
-                              .doc(FirebaseAuth.instance.currentUser!.uid)
-                              .collection('plans')
-                              .doc(docId)
-                              .update({'completed': isCompleted});
-                        },
-                      ),
-                    ],
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(left: 15),
-                    child: _buildWorkoutSection(content),
-                  ),
-                ],
+      return Container(
+        margin: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          color: Colors.blueGrey[50],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.only(
+              left: 30, top: 30, right: 10, bottom: 15),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                "Workout Plan",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.lightGreen, // Header color changed to teal
+                ),
               ),
-            ),
-          );
-        },
+              Padding(
+                padding: const EdgeInsets.only(left: 30, top: 10),
+                child: _buildWorkoutSection(content),
+              ),
+            ],
+          ),
+        ),
       );
     } catch (e) {
       return _buildErrorCard('Failed to load plan: ${e.toString()}');
@@ -382,6 +342,7 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
                   children: [
                     const SizedBox(height: 55), // Adjust for status bar
                     buildProfileSection(), // Make it take up space
+                    const SizedBox(height: 22), // Add some space between profile and calendar
                     buildCalendar(), // Ensure calendar fills space
                   ],
                 ),
