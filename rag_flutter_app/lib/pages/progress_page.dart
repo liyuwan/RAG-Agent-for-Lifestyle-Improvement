@@ -18,6 +18,7 @@ class _ProgressPageState extends State<ProgressPage> {
   String _caloriesBurnt = '';
   String _steps = '';
   List<FlSpot> _caloriesConsumedSpots = [];
+  int _consistencyStreak = 0; // Add this line
 
   final List<String> motivationalQuotes = [
     'Push yourself: "Push yourself because no one else is going to do it for you."',
@@ -53,6 +54,7 @@ class _ProgressPageState extends State<ProgressPage> {
           _height = userDoc.data()?['height']?.toString() ?? 'N/A';
           _caloriesBurnt = userDoc.data()?['caloriesBurnt']?.toString() ?? 'N/A';
           _steps = userDoc.data()?['steps']?.toString() ?? 'N/A';
+          _consistencyStreak = userDoc.data()?['consistencyStreak'] ?? 0; // Add this line
         });
 
         // Fetch calories consumed data for the week
@@ -80,6 +82,7 @@ class _ProgressPageState extends State<ProgressPage> {
           _height = 'N/A';
           _caloriesBurnt = 'N/A';
           _steps = 'N/A';
+          _consistencyStreak = 0; // Add this line
         });
       }
     } catch (e) {
@@ -88,6 +91,7 @@ class _ProgressPageState extends State<ProgressPage> {
         _height = 'Error';
         _caloriesBurnt = 'Error';
         _steps = 'Error';
+        _consistencyStreak = 0; // Add this line
       });
       debugPrint('Error fetching biometric data: $e');
     }
@@ -157,7 +161,7 @@ class _ProgressPageState extends State<ProgressPage> {
                 text: TextSpan(
                   children: [
                     TextSpan(text: 'Total steps today: ', style: TextStyle(fontSize: 13.0, fontWeight: FontWeight.bold, color: Colors.black)),
-                    TextSpan(text: '$_steps ', style: TextStyle(fontSize: 13.0, fontWeight: FontWeight.normal, color: Colors.black)),
+                    TextSpan(text: '$_steps steps', style: TextStyle(fontSize: 13.0, fontWeight: FontWeight.normal, color: Colors.black)),
                   ],
                 ),
               ),
@@ -199,7 +203,7 @@ class _ProgressPageState extends State<ProgressPage> {
                 text: TextSpan(
                   children: [
                     TextSpan(text: 'Consistency streak: ', style: TextStyle(fontSize: 13.0, fontWeight: FontWeight.bold, color: Colors.black)),
-                    TextSpan(text: 'static', style: TextStyle(fontSize: 13.0, fontWeight: FontWeight.normal, color: Colors.black)),
+                    TextSpan(text: '$_consistencyStreak days', style: TextStyle(fontSize: 13.0, fontWeight: FontWeight.normal, color: Colors.black)), // Update this line
                   ],
                 ),
               ),
@@ -238,7 +242,7 @@ class _ProgressPageState extends State<ProgressPage> {
         elevation: 0,
         color: Colors.white,
         child: Padding(
-          padding: const EdgeInsets.only(left: 10.0),
+          padding: const EdgeInsets.symmetric(horizontal: 5.0),
           child: LineChart(
             LineChartData(
               lineBarsData: [_buildLineChartBarData()],
@@ -247,6 +251,13 @@ class _ProgressPageState extends State<ProgressPage> {
                 show: true,
                 drawVerticalLine: false,
                 horizontalInterval: 100,
+                getDrawingHorizontalLine: (value) {
+                  return FlLine(
+                    color: Colors.blueGrey[100],
+                    strokeWidth: 0.5,
+                    dashArray: [5],
+                  );
+                },
               ),
               titlesData: _buildTitlesData(),
             ),
@@ -281,23 +292,45 @@ class _ProgressPageState extends State<ProgressPage> {
           getTitlesWidget: (value, meta) {
             switch (value.toInt()) {
               case 1:
-                return Text('Mon', style: TextStyle(fontSize: 10));
+                return Padding(
+                  padding: const EdgeInsets.only(top: 8.0), // Add padding to move the titles away from the chart
+                  child: Text('Mon', style: TextStyle(fontSize: 10, color: Colors.red)),
+                );
               case 2:
-                return Text('Tue', style: TextStyle(fontSize: 10));
+                return Padding(
+                  padding: const EdgeInsets.only(top: 8.0), // Add padding to move the titles away from the chart
+                  child: Text('Tue', style: TextStyle(fontSize: 10, color: Colors.red)),
+                );
               case 3:
-                return Text('Wed', style: TextStyle(fontSize: 10));
+                return Padding(
+                  padding: const EdgeInsets.only(top: 8.0), // Add padding to move the titles away from the chart
+                  child: Text('Wed', style: TextStyle(fontSize: 10, color: Colors.red)),
+                );
               case 4:
-                return Text('Thu', style: TextStyle(fontSize: 10));
+                return Padding(
+                  padding: const EdgeInsets.only(top: 8.0), // Add padding to move the titles away from the chart
+                  child: Text('Thu', style: TextStyle(fontSize: 10, color: Colors.red)),
+                );
               case 5:
-                return Text('Fri', style: TextStyle(fontSize: 10));
+                return Padding(
+                  padding: const EdgeInsets.only(top: 8.0), // Add padding to move the titles away from the chart
+                  child: Text('Fri', style: TextStyle(fontSize: 10, color: Colors.red)),
+                );
               case 6:
-                return Text('Sat', style: TextStyle(fontSize: 10));
+                return Padding(
+                  padding: const EdgeInsets.only(top: 8.0), // Add padding to move the titles away from the chart
+                  child: Text('Sat', style: TextStyle(fontSize: 10, color: Colors.red)),
+                );
               case 7:
-                return Text('Sun', style: TextStyle(fontSize: 10));
+                return Padding(
+                  padding: const EdgeInsets.only(top: 8.0), // Add padding to move the titles away from the chart
+                  child: Text('Sun', style: TextStyle(fontSize: 10, color: Colors.red)),
+                );
               default:
                 return Text('');
             }
           },
+          reservedSize: 30, // Reserve space to move the titles away from the chart
         ),
       ),
       leftTitles: AxisTitles(
@@ -309,9 +342,10 @@ class _ProgressPageState extends State<ProgressPage> {
           getTitlesWidget: (value, meta) {
             return Text(
               value.toInt().toString(),
-              style: TextStyle(fontSize: 8.0, color: Colors.black),
+              style: TextStyle(fontSize: 8.0, color: Colors.blueGrey) // Reduce font size,
             );
-          }
+          },
+          reservedSize: 30, // Reserve space for left titles
         ),
       ),
       rightTitles: AxisTitles(

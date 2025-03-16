@@ -16,6 +16,7 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
   DateTime selectedDate = DateTime.now();
   String username = '';
   String workoutLevel = ''; // Store the workout level
+  Map<String, bool> _completedExercises = {};
 
   @override
   void initState() {
@@ -43,6 +44,19 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
               workoutLevel = fetchedWorkoutLevel;
             });
           }
+        }
+
+        final exercisesDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('exercise_completions')
+            .doc(DateFormat('yyyy-MM-dd').format(selectedDate))
+            .get();
+
+        if (exercisesDoc.exists) {
+          setState(() {
+            _completedExercises = Map<String, bool>.from(exercisesDoc['completed_exercises'] ?? {});
+          });
         }
       } catch (e) {
         print('Error fetching user data: $e');
@@ -78,6 +92,7 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
     setState(() {
       selectedDate = date;
     });
+    _fetchUserData(); // Fetch the completed exercises for the selected date
   }
 
   // Build user profile and menu section
@@ -235,6 +250,43 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
     );
   }
 
+  Future<void> _saveCompletedExercises(String userId, DateTime targetDate, Map<String, bool> completedExercises, List<Map<String, dynamic>> allExercises) async {
+    try {
+      // Ensure all exercises are included in the completedExercises map
+      for (var exercise in allExercises) {
+        if (!completedExercises.containsKey(exercise['exercise'])) {
+          completedExercises[exercise['exercise']] = false;
+        }
+      }
+
+      // Check if all exercises are completed
+      bool allCompleted = completedExercises.values.every((value) => value == true);
+
+      // Fetch the current consistency streak
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+      int currentStreak = userDoc.data()?['consistencyStreak'] ?? 0;
+
+      // Update the consistency streak
+      int newStreak = allCompleted ? currentStreak + 1 : 0;
+
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .collection('exercise_completions')
+          .doc(DateFormat('yyyy-MM-dd').format(targetDate))
+          .set({
+        'date': targetDate,
+        'completed_exercises': completedExercises,
+      });
+
+      await FirebaseFirestore.instance.collection('users').doc(userId).update({
+        'consistencyStreak': newStreak,
+      });
+    } catch (e) {
+      print('Error saving completed exercises: $e');
+    }
+  }
+
   /// Build workout plan card with a toggleable checkmark
   Widget buildWorkoutPlanCard(Map<String, dynamic> data) {
     try {
@@ -276,23 +328,51 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
   }
 
   Widget _buildWorkoutSection(List<dynamic> exercises) {
+    final List<Map<String, dynamic>> exercisesList = exercises.cast<Map<String, dynamic>>();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: exercises.map((exercise) {
+      children: exercisesList.map((exercise) {
         return Padding(
           padding: const EdgeInsets.symmetric(vertical: 10), // Adjust spacing
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Row(
             children: [
-              Text(
-                exercise['exercise'],
-                style:
-                    const TextStyle(fontWeight: FontWeight.w500, fontSize: 16),
+              StatefulBuilder(
+                builder: (BuildContext context, StateSetter setState) {
+                  bool isCompleted = _completedExercises[exercise['exercise']] ?? false;
+                  return Checkbox(
+                    shape: CircleBorder(),
+                    value: isCompleted,
+                    activeColor: Colors.teal,
+                    onChanged: (bool? value) {
+                      setState(() {
+                        _completedExercises[exercise['exercise']] = value ?? false;
+                      });
+                      final user = FirebaseAuth.instance.currentUser;
+                      if (user != null) {
+                        _saveCompletedExercises(user.uid, selectedDate, _completedExercises, exercisesList);
+                      }
+                    },
+                  );
+                },
               ),
-              Text(
-                "${exercise['duration']} mins • ${exercise['intensity']}",
-                style: TextStyle(
-                    color: Colors.grey[700]), // Optional: Subtle color
+              const SizedBox(width: 10), // Add some space between checkbox and text
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      exercise['exercise'],
+                      style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 16),
+                    ),
+                    Text(
+                      "${exercise['duration']} mins • ${exercise['intensity']}",
+                      style: TextStyle(
+                        color: Colors.grey[700], // Optional: Subtle color
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
