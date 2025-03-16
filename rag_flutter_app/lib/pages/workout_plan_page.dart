@@ -57,6 +57,10 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
           setState(() {
             _completedExercises = Map<String, bool>.from(exercisesDoc['completed_exercises'] ?? {});
           });
+        } else {
+          setState(() {
+            _completedExercises = {}; // Reset if no data exists for the selected date
+          });
         }
       } catch (e) {
         print('Error fetching user data: $e');
@@ -91,6 +95,7 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
   void onDateSelected(DateTime date) {
     setState(() {
       selectedDate = date;
+      _completedExercises = {}; // Reset the completed exercises map
     });
     _fetchUserData(); // Fetch the completed exercises for the selected date
   }
@@ -329,6 +334,9 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
 
   Widget _buildWorkoutSection(List<dynamic> exercises) {
     final List<Map<String, dynamic>> exercisesList = exercises.cast<Map<String, dynamic>>();
+    bool isCurrentDay = selectedDate.day == DateTime.now().day &&
+                        selectedDate.month == DateTime.now().month &&
+                        selectedDate.year == DateTime.now().year;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -337,25 +345,26 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
           padding: const EdgeInsets.symmetric(vertical: 10), // Adjust spacing
           child: Row(
             children: [
-              StatefulBuilder(
-                builder: (BuildContext context, StateSetter setState) {
-                  bool isCompleted = _completedExercises[exercise['exercise']] ?? false;
-                  return Checkbox(
-                    shape: CircleBorder(),
-                    value: isCompleted,
-                    activeColor: Colors.teal,
-                    onChanged: (bool? value) {
-                      setState(() {
-                        _completedExercises[exercise['exercise']] = value ?? false;
-                      });
-                      final user = FirebaseAuth.instance.currentUser;
-                      if (user != null) {
-                        _saveCompletedExercises(user.uid, selectedDate, _completedExercises, exercisesList);
-                      }
-                    },
-                  );
-                },
-              ),
+              if (isCurrentDay)
+                StatefulBuilder(
+                  builder: (BuildContext context, StateSetter setState) {
+                    bool isCompleted = _completedExercises[exercise['exercise']] ?? false;
+                    return Checkbox(
+                      shape: CircleBorder(),
+                      value: isCompleted,
+                      activeColor: Colors.teal,
+                      onChanged: (bool? value) {
+                        setState(() {
+                          _completedExercises[exercise['exercise']] = value ?? false;
+                        });
+                        final user = FirebaseAuth.instance.currentUser;
+                        if (user != null) {
+                          _saveCompletedExercises(user.uid, selectedDate, _completedExercises, exercisesList);
+                        }
+                      },
+                    );
+                  },
+                ),
               const SizedBox(width: 10), // Add some space between checkbox and text
               Expanded(
                 child: Column(
@@ -422,7 +431,7 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
                   children: [
                     const SizedBox(height: 55), // Adjust for status bar
                     buildProfileSection(), // Make it take up space
-                    const SizedBox(height: 22), // Add some space between profile and calendar
+                    const SizedBox(height: 20), // Add some space between profile and calendar
                     buildCalendar(), // Ensure calendar fills space
                   ],
                 ),
