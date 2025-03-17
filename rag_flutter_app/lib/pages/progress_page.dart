@@ -16,14 +16,19 @@ class ProgressPage extends StatefulWidget {
 }
 
 class _ProgressPageState extends State<ProgressPage> {
+
+  //From Firestore database
   String _weight = '';
   String _height = '';
+  int _consistencyStreak = 0;
+  List<FlSpot> _caloriesConsumedSpots = [];
+
+  //From HealthKit
   String _caloriesBurnt = '';
   String _steps = '';
-  List<FlSpot> _caloriesConsumedSpots = [];
-  List<FlSpot> _caloriesBurntSpots = [];
-  int _consistencyStreak = 0;
   double _mostCaloriesBurnt = 0.0;
+  Map<DateTime, double> dailyCaloriesBurnt = {};
+  List<FlSpot> _caloriesBurntSpots = [];
 
   final List<String> motivationalQuotes = [
     'Push yourself: "Push yourself because no one else is going to do it for you."',
@@ -63,7 +68,6 @@ class _ProgressPageState extends State<ProgressPage> {
           _weight = userDoc.data()?['weight']?.toString() ?? 'N/A';
           _height = userDoc.data()?['height']?.toString() ?? 'N/A';
           _consistencyStreak = userDoc.data()?['consistencyStreak'] ?? 0;
-          // Note: _caloriesBurnt and _steps will be fetched from HealthKit
         });
       } else {
         setState(() {
@@ -73,27 +77,45 @@ class _ProgressPageState extends State<ProgressPage> {
         });
       }
 
-      // Fetch health data (calories burnt and steps) from HealthKit
-      await _fetchHealthData();
+      // Calculate the start date for the last 7 days
+      final now = DateTime.now();
+      final startDate = DateTime(now.year, now.month, now.day - 6);
 
-      // Fetch calories consumed data for the week from Firestore
+      // Fetch calories consumed data for the last 7 days from Firestore
+      final startTimestamp = Timestamp.fromDate(startDate);
       final caloriesConsumedData = await FirebaseFirestore.instance
           .collection('users')
           .doc(currentUser.uid)
           .collection('calories_consumed')
-          .orderBy('date', descending: true)
-          .limit(7)
+          .where('date', isGreaterThanOrEqualTo: startTimestamp)
+          .orderBy('date', descending: false)
           .get();
 
-      List<FlSpot> spots = [];
+      Map<DateTime, double> caloriesConsumedMap = {};
       for (var doc in caloriesConsumedData.docs) {
         DateTime date = (doc.data()['date'] as Timestamp).toDate();
+        date = DateTime(date.year, date.month, date.day); // Normalize to midnight
         double calories = doc.data()['calories_consumed'].toDouble();
-        spots.add(FlSpot(date.weekday.toDouble(), calories));
+        caloriesConsumedMap[date] = calories; // Assumes one entry per day; sum if multiple
+      }
+
+      // Fetch health data for the last 7 days
+      await _fetchHealthData(startDate, now);
+
+      // Generate spots for the last 7 days
+      List<FlSpot> caloriesConsumedSpots = [];
+      List<FlSpot> caloriesBurntSpots = [];
+      for (int i = 0; i < 7; i++) {
+        DateTime day = startDate.add(Duration(days: i));
+        double consumed = caloriesConsumedMap[day] ?? 0.0; // 0 if no data
+        double burnt = dailyCaloriesBurnt[day] ?? 0.0; // 0 if no data
+        caloriesConsumedSpots.add(FlSpot(i.toDouble(), consumed));
+        caloriesBurntSpots.add(FlSpot(i.toDouble(), burnt));
       }
 
       setState(() {
-        _caloriesConsumedSpots = spots;
+        _caloriesConsumedSpots = caloriesConsumedSpots;
+        _caloriesBurntSpots = caloriesBurntSpots;
       });
     } catch (e) {
       setState(() {
@@ -107,7 +129,7 @@ class _ProgressPageState extends State<ProgressPage> {
     }
   }
 
-  Future<void> _fetchHealthData() async {
+  Future<void> _fetchHealthData(DateTime startDate, DateTime now) async {
     try {
       // Request activity recognition permission on Android
       if (Platform.isAndroid) {
@@ -137,59 +159,42 @@ class _ProgressPageState extends State<ProgressPage> {
         }
       }
 
-      // Define time range: today from midnight to now
-      final now = DateTime.now();
-      final midnight = DateTime(now.year, now.month, now.day);
-
       // Fetch total steps today
+      final midnight = DateTime(now.year, now.month, now.day);
       int? steps = await health.getTotalStepsInInterval(midnight, now);
 
-      // Fetch calories burnt today
+      // Fetch calories burnt for the last 7 days
       List<HealthDataPoint> energyData = await health.getHealthDataFromTypes(
-        startTime: midnight,
+        startTime: startDate,
         endTime: now,
         types: [HealthDataType.ACTIVE_ENERGY_BURNED],
       );
-      double caloriesBurnt = 0.0;
+
+      Map<DateTime, double> dailyCaloriesBurntTemp = {};
       for (var point in energyData) {
         if (point.value is NumericHealthValue) {
-          caloriesBurnt += (point.value as NumericHealthValue).numericValue;
+          DateTime date = DateTime(
+              point.dateFrom.year, point.dateFrom.month, point.dateFrom.day);
+          double calories = (point.value as NumericHealthValue).numericValue.toDouble();
+          dailyCaloriesBurntTemp[date] =
+              (dailyCaloriesBurntTemp[date] ?? 0) + calories;
         }
       }
 
-      // Fetch historical data to find the most calories burnt in a day
-      final startOfYear = DateTime(now.year, 1, 1);
-      List<HealthDataPoint> historicalEnergyData = await health.getHealthDataFromTypes(
-        startTime: startOfYear,
-        endTime: now,
-        types: [HealthDataType.ACTIVE_ENERGY_BURNED],
-      );
-
+      // Calculate most calories burnt in the last 7 days
       double mostCaloriesBurnt = 0.0;
-      Map<DateTime, double> dailyCalories = {};
-
-      for (var point in historicalEnergyData) {
-        if (point.value is NumericHealthValue) {
-          DateTime date = DateTime(point.dateFrom.year, point.dateFrom.month, point.dateFrom.day);
-          dailyCalories[date] = (dailyCalories[date] ?? 0) + (point.value as NumericHealthValue).numericValue;
-        }
-      }
-
-      // Clear the existing spots before adding new data
-      _caloriesBurntSpots.clear();
-
-      dailyCalories.forEach((date, calories) {
+      dailyCaloriesBurntTemp.forEach((date, calories) {
         if (calories > mostCaloriesBurnt) {
           mostCaloriesBurnt = calories;
         }
-        _caloriesBurntSpots.add(FlSpot(date.weekday.toDouble(), calories));
       });
 
       // Update state with fetched data
       setState(() {
         _steps = steps?.toString() ?? '0';
-        _caloriesBurnt = caloriesBurnt.toStringAsFixed(0);
+        _caloriesBurnt = (dailyCaloriesBurntTemp[midnight] ?? 0).toStringAsFixed(0);
         _mostCaloriesBurnt = mostCaloriesBurnt;
+        dailyCaloriesBurnt = dailyCaloriesBurntTemp; // Store for chart use
       });
     } catch (e) {
       setState(() {
@@ -508,58 +513,53 @@ class _ProgressPageState extends State<ProgressPage> {
   }
 
   FlTitlesData _buildTitlesData() {
+    final now = DateTime.now();
+    final startDate = DateTime(now.year, now.month, now.day - 6);
+
     return FlTitlesData(
       bottomTitles: AxisTitles(
         sideTitles: SideTitles(
           showTitles: true,
           interval: 1,
           getTitlesWidget: (value, meta) {
-            switch (value.toInt()) {
-              case 1:
-                return Padding(
-                  padding: const EdgeInsets.only(top: 8.0),
-                  child: Text('Mon',
-                      style: TextStyle(fontSize: 10, color: Colors.red)),
-                );
-              case 2:
-                return Padding(
-                  padding: const EdgeInsets.only(top: 8.0),
-                  child: Text('Tue',
-                      style: TextStyle(fontSize: 10, color: Colors.red)),
-                );
-              case 3:
-                return Padding(
-                  padding: const EdgeInsets.only(top: 8.0),
-                  child: Text('Wed',
-                      style: TextStyle(fontSize: 10, color: Colors.red)),
-                );
-              case 4:
-                return Padding(
-                  padding: const EdgeInsets.only(top: 8.0),
-                  child: Text('Thu',
-                      style: TextStyle(fontSize: 10, color: Colors.red)),
-                );
-              case 5:
-                return Padding(
-                  padding: const EdgeInsets.only(top: 8.0),
-                  child: Text('Fri',
-                      style: TextStyle(fontSize: 10, color: Colors.red)),
-                );
-              case 6:
-                return Padding(
-                  padding: const EdgeInsets.only(top: 8.0),
-                  child: Text('Sat',
-                      style: TextStyle(fontSize: 10, color: Colors.red)),
-                );
-              case 7:
-                return Padding(
-                  padding: const EdgeInsets.only(top: 8.0),
-                  child: Text('Sun',
-                      style: TextStyle(fontSize: 10, color: Colors.red)),
-                );
-              default:
-                return Text('');
+            int index = value.toInt();
+            if (index >= 0 && index < 7) {
+              DateTime day = startDate.add(Duration(days: index));
+              String weekday;
+              switch (day.weekday) {
+                case 1:
+                  weekday = 'Mon';
+                  break;
+                case 2:
+                  weekday = 'Tue';
+                  break;
+                case 3:
+                  weekday = 'Wed';
+                  break;
+                case 4:
+                  weekday = 'Thu';
+                  break;
+                case 5:
+                  weekday = 'Fri';
+                  break;
+                case 6:
+                  weekday = 'Sat';
+                  break;
+                case 7:
+                  weekday = 'Sun';
+                  break;
+                default:
+                  weekday = ''; // Shouldn’t happen
+              }
+              return Padding(
+                padding: const EdgeInsets.only(top: 8.0),
+                child: Text(
+                  weekday,
+                  style: TextStyle(fontSize: 10, color: Colors.red),
+                ),
+              );
             }
+            return Text('');
           },
           reservedSize: 30,
         ),
@@ -587,7 +587,7 @@ class _ProgressPageState extends State<ProgressPage> {
       ),
     );
   }
-
+  
   @override
   Widget build(BuildContext context) {
     String todayDate = DateFormat('MMMM dd, yyyy').format(DateTime.now());
@@ -612,44 +612,47 @@ class _ProgressPageState extends State<ProgressPage> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 25.0, vertical: 5.0),
-          child: Column(
-            children: [
-              _buildUserCurrentDataSection(),
-              SizedBox(height: 15.0),
-              _buildAchievementSection(),
-              SizedBox(height: 15.0),
-              _buildMotivationalQuoteSection(),
-              SizedBox(height: 18.0),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: [
-                  SizedBox(width: 10.0),
-                  Text(
-                    "Calories Overview",
-                    style: TextStyle(
-                        fontSize: 16.0,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.black),
-                  ),
-                  Spacer(),
-                  IconButton(
-                    onPressed: _getBiometricData,
-                    icon: Icon(
-                      Icons.refresh_rounded,
-                      color: Colors.blue[200],
+      body: RefreshIndicator(
+        onRefresh: _getBiometricData,
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 25.0, vertical: 5.0),
+            child: Column(
+              children: [
+                _buildUserCurrentDataSection(),
+                SizedBox(height: 15.0),
+                _buildAchievementSection(),
+                SizedBox(height: 15.0),
+                _buildMotivationalQuoteSection(),
+                SizedBox(height: 18.0),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    SizedBox(width: 10.0),
+                    Text(
+                      "Calories Overview",
+                      style: TextStyle(
+                          fontSize: 16.0,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.black),
                     ),
-                    color: Colors.lightBlue[300],
-                    tooltip: 'Refresh Data',
-                  ),
-                ],
-              ),
-              SizedBox(height: 15.0),
-              _buildCaloriesOverviewChart(),
-              SizedBox(height: 100.0),
-            ],
+                    Spacer(),
+                    IconButton(
+                      onPressed: _getBiometricData,
+                      icon: Icon(
+                        Icons.refresh_rounded,
+                        color: Colors.blue[200],
+                      ),
+                      color: Colors.lightBlue[300],
+                      tooltip: 'Refresh Data',
+                    ),
+                  ],
+                ),
+                SizedBox(height: 15.0),
+                _buildCaloriesOverviewChart(),
+                SizedBox(height: 100.0),
+              ],
+            ),
           ),
         ),
       ),
