@@ -16,7 +16,7 @@ dependencies:
   http: ^1.2.2               # For HTTP requests
   cupertino_icons: ^1.0.8    # iOS-styled icons
   flutter_sound: ^9.2.13     # Audio recording and playback
-  permission_handler: ^10.4.5 # For managing app permissions
+  permission_handler: ^11.4.0 # For managing app permissions
   firebase_core: ^3.10.0
   cloud_firestore: ^5.6.1
   firebase_auth: ^5.4.0
@@ -24,7 +24,7 @@ dependencies:
   flutter_tts: ^4.2.1
   image_picker: ^1.1.2
   firebase_storage: ^12.4.2
-  intl: ^0.18.1
+  intl: ^0.20.2
   google_sign_in: ^6.2.2
   fl_chart: ^0.70.2
   health: ^12.0.1
@@ -47,3 +47,4 @@ flutter:
     - assets/mealplan-banner.png
     - assets/workoutplan-banner.png
     - assets/achievements.png
+    - assets/robot.jpg

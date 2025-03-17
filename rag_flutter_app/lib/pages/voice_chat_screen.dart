@@ -116,42 +116,54 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Voice Chat"),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            Navigator.pop(context, _conversation); // Return conversation
-          },
+      appBar: PreferredSize(
+        preferredSize: Size.fromHeight(40.0), // Adjust the height as needed
+        child: AppBar(
+          title: const Text("Voice Chat"),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () {
+              Navigator.pop(context, _conversation); // Return conversation
+            },
+          ),
+          elevation: 0, // Optional: Remove shadow to make it sleeker
         ),
       ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: MediaQuery.of(context).size.width * 0.85,
-                height: 350,
-                padding: const EdgeInsets.all(25.0),
-                margin: const EdgeInsets.only(bottom: 16.0),
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(30),
+      body: Padding(
+        padding: const EdgeInsets.only(top: 0), // Minimize the space by reducing top padding
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Image in the middle
+                Image.asset(
+                  'assets/robot.jpg', // Change this to your image path
+                  width: 300,
+                  height: 300,
+                  fit: BoxFit.cover,
                 ),
-                child: SingleChildScrollView(
-                  child: Text(
-                    _displayText,
-                    style: const TextStyle(fontSize: 17),
-                    textAlign: TextAlign.start,
+                const SizedBox(height: 10), // Space between image and text box
+
+                // Text box below the image
+                Container(
+                  width: MediaQuery.of(context).size.width * 0.85,
+                  height: 150, // Reduced height
+                  padding: const EdgeInsets.all(20.0),
+                  child: SingleChildScrollView(
+                    child: Text(
+                      _displayText,
+                      style: const TextStyle(fontSize: 17),
+                      textAlign: TextAlign.center,
+                    ),
                   ),
                 ),
-              ),
-              SizedBox(height: 100),
-              Positioned(
-                bottom: 40,
-                child: GestureDetector(
+
+                const SizedBox(height: 20), // Space between text and mic icon
+
+                // Mic icon at the bottom
+                GestureDetector(
                   onTap: () {
                     if (_isListening) {
                       _stopListening();
@@ -159,18 +171,17 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> {
                     _startListening();
                   },
                   child: CircleAvatar(
-                    radius: 60,
-                    backgroundColor:
-                        _isListening ? Colors.red : const Color(0xFF66B2B2),
-                    child: Image.asset(
-                      'assets/voice_chat.png',
-                      width: 50,
-                      height: 50,
+                    radius: 50,
+                    backgroundColor: _isListening ? Colors.red : const Color(0xFF66B2B2),
+                    child: Icon(
+                      Icons.mic,
+                      color: Colors.white,
+                      size: 40,
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
