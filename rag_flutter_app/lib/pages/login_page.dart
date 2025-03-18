@@ -15,7 +15,8 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _confirmPasswordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
   bool _isLoading = false;
   bool _isRegistering = false;
   bool _obscurePassword = true;
@@ -45,13 +46,17 @@ class _LoginPageState extends State<LoginPage> {
     setState(() => _isLoading = true);
 
     try {
-      UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      UserCredential userCredential =
+          await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: _emailController.text,
         password: _passwordController.text,
       );
 
       String name = _emailController.text.trim().split('@')[0];
-      FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).set({
+      FirebaseFirestore.instance
+          .collection('users')
+          .doc(userCredential.user!.uid)
+          .set({
         'name': name,
         'age': 22,
         'calories_burned': 467,
@@ -62,7 +67,8 @@ class _LoginPageState extends State<LoginPage> {
       });
 
       Navigator.pushReplacement(
-        context, MaterialPageRoute(builder: (context) => const InputPage()),
+        context,
+        MaterialPageRoute(builder: (context) => const InputPage()),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -70,6 +76,28 @@ class _LoginPageState extends State<LoginPage> {
       );
     }
     setState(() => _isLoading = false);
+  }
+
+  Future<void> _resetPassword() async {
+    if (_emailController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter your email address')),
+      );
+      return;
+    }
+
+    try {
+      await FirebaseAuth.instance
+          .sendPasswordResetEmail(email: _emailController.text.trim());
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Password reset email sent. Check your inbox.')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: ${e.toString()}')),
+      );
+    }
   }
 
   @override
@@ -91,12 +119,13 @@ class _LoginPageState extends State<LoginPage> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Image.asset(
-                  'assets/login_logo.png',  // Ensure the logo is placed in the `assets` directory
+                  'assets/login_logo.png', // Ensure the logo is placed in the `assets` directory
                   height: 200,
                 ),
-                const SizedBox(height: 20),  // Add some spacing
+                const SizedBox(height: 20), // Add some spacing
                 Card(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30)),
                   elevation: 10,
                   child: Padding(
                     padding: const EdgeInsets.all(25),
@@ -104,32 +133,63 @@ class _LoginPageState extends State<LoginPage> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          _isRegistering ? 'Create an Account' : 'Welcome Back!',
-                          style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.black87),
+                          _isRegistering
+                              ? 'Create an Account'
+                              : 'Welcome Back!',
+                          style: const TextStyle(
+                              fontSize: 26,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87),
                         ),
                         const SizedBox(height: 20),
-                        _buildTextField(_emailController, 'Email', Icons.email, false),
+                        _buildTextField(
+                            _emailController, 'Email', Icons.email, false),
                         const SizedBox(height: 15),
-                        _buildTextField(_passwordController, 'Password', Icons.lock, true, isConfirm: false),
+                        _buildTextField(
+                            _passwordController, 'Password', Icons.lock, true,
+                            isConfirm: false),
                         if (_isRegistering) const SizedBox(height: 15),
-                        if (_isRegistering) _buildTextField(_confirmPasswordController, 'Confirm Password', Icons.lock, true, isConfirm: true),
-                        const SizedBox(height: 30),
+                        if (_isRegistering)
+                          _buildTextField(_confirmPasswordController,
+                              'Confirm Password', Icons.lock, true,
+                              isConfirm: true),
+                        Align(
+                          alignment: Alignment.center,
+                          child: TextButton(
+                            onPressed: _resetPassword,
+                            child: const Text(
+                              'Forgot Password?',
+                              style: TextStyle(
+                                  fontSize: 16, color: Colors.black54),
+                            ),
+                          ),
+                        ),
                         _isLoading
-                            ? const CircularProgressIndicator(color: Color(0xFF008080))
+                            ? const CircularProgressIndicator(
+                                color: Color(0xFF008080))
                             : Column(
                                 children: [
                                   ElevatedButton(
-                                    onPressed: _isRegistering ? _register : _login,
+                                    onPressed:
+                                        _isRegistering ? _register : _login,
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: const Color(0xFF008080),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),  // Same as Google Sign In
-                                      minimumSize: const Size(double.infinity, 50), // Make the button's width take the full space and fixed height
-                                      elevation: 3, // Optional: to match the "Sign in with Google" button elevation
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(30)),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 20,
+                                          vertical:
+                                              12), // Same as Google Sign In
+                                      minimumSize: const Size(double.infinity,
+                                          50), // Make the button's width take the full space and fixed height
+                                      elevation:
+                                          3, // Optional: to match the "Sign in with Google" button elevation
                                     ),
                                     child: Text(
                                       _isRegistering ? 'Register' : 'Login',
-                                      style: const TextStyle(fontSize: 18, color: Colors.white),
+                                      style: const TextStyle(
+                                          fontSize: 18, color: Colors.white),
                                     ),
                                   ),
 
@@ -140,7 +200,7 @@ class _LoginPageState extends State<LoginPage> {
                                     children: [
                                       Expanded(
                                         child: Divider(
-                                          color: Colors.black54, 
+                                          color: Colors.black54,
                                           thickness: 1,
                                           indent: 20,
                                           endIndent: 10,
@@ -148,11 +208,13 @@ class _LoginPageState extends State<LoginPage> {
                                       ),
                                       const Text(
                                         'or log in with',
-                                        style: TextStyle(color: Colors.black54, fontSize: 16),
+                                        style: TextStyle(
+                                            color: Colors.black54,
+                                            fontSize: 16),
                                       ),
                                       Expanded(
                                         child: Divider(
-                                          color: Colors.black54, 
+                                          color: Colors.black54,
                                           thickness: 1,
                                           indent: 10,
                                           endIndent: 20,
@@ -164,25 +226,41 @@ class _LoginPageState extends State<LoginPage> {
 
                                   ElevatedButton.icon(
                                     onPressed: () async {
-                                      UserCredential? userCredential = await AuthService().signInWithGoogle();
+                                      UserCredential? userCredential =
+                                          await AuthService()
+                                              .signInWithGoogle();
                                       if (userCredential != null) {
                                         Navigator.pushReplacement(
                                           context,
-                                          MaterialPageRoute(builder: (context) => const MainPage()),
+                                          MaterialPageRoute(
+                                              builder: (context) =>
+                                                  const MainPage()),
                                         );
                                       } else {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(content: Text('Google Sign-In failed')),
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          const SnackBar(
+                                              content: Text(
+                                                  'Google Sign-In failed')),
                                         );
                                       }
                                     },
-                                    icon: Image.asset('assets/google_logo.png', height: 24),
-                                    label: const Text('Sign in with Google', style: TextStyle(color: Colors.black87)),
+                                    icon: Image.asset('assets/google_logo.png',
+                                        height: 24),
+                                    label: const Text('Sign in with Google',
+                                        style:
+                                            TextStyle(color: Colors.black87)),
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: Colors.white,
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),  // Same padding as Login/Register
-                                      minimumSize: const Size(double.infinity, 50), // Fixed width and height
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(30)),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 20,
+                                          vertical:
+                                              12), // Same padding as Login/Register
+                                      minimumSize: const Size(double.infinity,
+                                          50), // Fixed width and height
                                       elevation: 3,
                                     ),
                                   ),
@@ -198,8 +276,11 @@ class _LoginPageState extends State<LoginPage> {
                                       });
                                     },
                                     child: Text(
-                                      _isRegistering ? 'Already have an account? Login' : 'Don’t have an account? Register',
-                                      style: const TextStyle(fontSize: 16, color: Colors.black54),
+                                      _isRegistering
+                                          ? 'Already have an account? Login'
+                                          : 'Don’t have an account? Register',
+                                      style: const TextStyle(
+                                          fontSize: 16, color: Colors.black54),
                                     ),
                                   ),
                                 ],
@@ -216,7 +297,9 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  Widget _buildTextField(TextEditingController controller, String label, IconData icon, bool isPassword, {bool isConfirm = false}) {
+  Widget _buildTextField(TextEditingController controller, String label,
+      IconData icon, bool isPassword,
+      {bool isConfirm = false}) {
     return TextField(
       controller: controller,
       decoration: InputDecoration(
@@ -224,7 +307,13 @@ class _LoginPageState extends State<LoginPage> {
         prefixIcon: Icon(icon, color: const Color(0xFF008080)),
         suffixIcon: isPassword
             ? IconButton(
-                icon: Icon(isConfirm ? (_obscureConfirmPassword ? Icons.visibility : Icons.visibility_off) : (_obscurePassword ? Icons.visibility : Icons.visibility_off)),
+                icon: Icon(isConfirm
+                    ? (_obscureConfirmPassword
+                        ? Icons.visibility
+                        : Icons.visibility_off)
+                    : (_obscurePassword
+                        ? Icons.visibility
+                        : Icons.visibility_off)),
                 onPressed: () {
                   setState(() {
                     if (isConfirm) {
@@ -240,21 +329,9 @@ class _LoginPageState extends State<LoginPage> {
         filled: true,
         fillColor: Colors.transparent,
       ),
-      obscureText: isPassword ? (isConfirm ? _obscureConfirmPassword : _obscurePassword) : false,
+      obscureText: isPassword
+          ? (isConfirm ? _obscureConfirmPassword : _obscurePassword)
+          : false,
     );
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
