@@ -7,9 +7,9 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:937312548700:android:d58cabc0810a292876f399",
+        "mobilesdk_app_id": "1:937312548700:android:7a88caf7a5e6802976f399",
         "android_client_info": {
-          "package_name": "com.example.rag_flutter_app"
+          "package_name": "com.cflbugs.ragFlutterApp"
         }
       },
       "oauth_client": [

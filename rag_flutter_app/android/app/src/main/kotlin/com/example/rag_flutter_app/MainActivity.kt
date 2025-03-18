@@ -1,5 +1,7 @@
-package com.example.rag_flutter_app
+package com.cflbugs.ragFlutterApp
 
-import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.android.FlutterFragmentActivity
 
-class MainActivity: FlutterActivity()
+class MainActivity: FlutterFragmentActivity() {
+    
+}
