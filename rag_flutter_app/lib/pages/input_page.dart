@@ -3,6 +3,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:rag_flutter_app/pages/main_page.dart';
 import 'login_page.dart';
 import 'dart:io';
 
@@ -13,7 +14,6 @@ class InputPage extends StatefulWidget {
   State<InputPage> createState() => _InputPageState();
 }
 
-
 class _InputPageState extends State<InputPage> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _nameController = TextEditingController();
@@ -21,106 +21,78 @@ class _InputPageState extends State<InputPage> {
   final TextEditingController _weightController = TextEditingController();
   final TextEditingController _heightController = TextEditingController();
 
-  File? _image;  // To store the selected image
+  File? _image;
+  String? _selectedGender;
   bool _isSubmitting = false;
 
-
-  // Function to pick an image from gallery or camera
+  // Function to pick an image from the gallery
   Future<void> _pickImage(ImageSource source) async {
     final pickedFile = await ImagePicker().pickImage(source: source);
     if (pickedFile != null) {
       setState(() {
         _image = File(pickedFile.path);
-        print("Image selected: ${_image!.path}");
       });
-    } else {
-      print("No image selected.");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No image selected')),
-      );
-    }
-
-  }
-
-  // Function to upload the image to Firebase Storage
-  Future<String?> _uploadImage(File image) async{
-    try{
-      String fileName = 'profile_images/${DateTime.now().millisecondsSinceEpoch}.jpg';
-      Reference ref = FirebaseStorage.instance.ref().child(fileName);
-      UploadTask uploadTask = ref.putFile(image);
-
-      TaskSnapshot snapshot = await uploadTask;
-      String downloadURL = await snapshot.ref.getDownloadURL();
-
-      print("Image uploaded successfully: $downloadURL");
-
-      return downloadURL;
-    } catch(e) {
-      print("Image upload failed: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Image upload failed: $e')),
-      );
-      return null;
     }
   }
 
-  // Function to submit from data to Firestore
+  // Function to submit form data
   Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isSubmitting = true);
 
-      try{
-        //Get the current user
-        User? user = FirebaseAuth.instance.currentUser;
-        if(user == null) {
-          Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => LoginPage()),
-          );
-          return;
-        }
-
-        if (_image == null) {
-          print("No image selected for upload.");
-        } else {
-          print("Uploading image: ${_image!.path}");
-        }
-
-        //Upload image if selected 
-        String? imageUrl;
-        if (_image != null) {
-          imageUrl = await _uploadImage(_image!);
-          if (imageUrl == null) {
-            print("Failed to upload image, skipping profileImage field.");
-          }
-        }
-
-        //Store data in Firestore
-        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
-          'name': _nameController.text.trim(),
-          'age': int.parse(_ageController.text.trim()),
-          'weight': double.parse(_weightController.text.trim()),
-          'height': double.parse(_heightController.text.trim()),
-          'profileImage': imageUrl ?? "", // Firebase Storage URL or null
-          'last_updated': FieldValue.serverTimestamp(),
-          'heart_rate': 92,
-          'steps': 1423,
-        });
-
-        print("User profile saved successfully!"); // Debugging log
-
+    try {
+      User? user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => Input_2Page()),
+          MaterialPageRoute(builder: (context) => LoginPage()),
         );
-
-      } catch(e) {
-        print("Error saving profile: $e");
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString()}')),
-        );
+        return;
       }
 
-      setState(() => _isSubmitting = false);
+      // Upload image if selected
+      String? imageUrl;
+      if (_image != null) {
+        imageUrl = await _uploadImage(_image!);
+      }
+
+      // Save data to Firestore
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+        'name': _nameController.text.trim(),
+        'age': int.parse(_ageController.text.trim()),
+        'weight': double.parse(_weightController.text.trim()),
+        'height': double.parse(_heightController.text.trim()),
+        'gender': _selectedGender,
+        'profileImage': imageUrl ?? "",
+        'last_updated': FieldValue.serverTimestamp(),
+      });
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => Input_2Page()),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: ${e.toString()}')),
+      );
+    }
+
+    setState(() => _isSubmitting = false);
+  }
+
+  // Function to upload the image to Firebase Storage
+  Future<String?> _uploadImage(File image) async {
+    try {
+      String fileName = 'profile_images/${DateTime.now().millisecondsSinceEpoch}.jpg';
+      Reference ref = FirebaseStorage.instance.ref().child(fileName);
+      UploadTask uploadTask = ref.putFile(image);
+      TaskSnapshot snapshot = await uploadTask;
+      return await snapshot.ref.getDownloadURL();
+    } catch (e) {
+      print("Image upload failed: $e");
+      return null;
+    }
   }
 
   @override
@@ -135,7 +107,6 @@ class _InputPageState extends State<InputPage> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-
                 // Profile Image Section
                 Center(
                   child: Stack(
@@ -161,106 +132,85 @@ class _InputPageState extends State<InputPage> {
                     ],
                   ),
                 ),
-
                 SizedBox(height: 60),
-                 Container(
-                  width: 332,
-                  height: 48,
-                  child: TextFormField(
-                    controller: _nameController,
-                    decoration: InputDecoration(
-                      labelText: 'Name',
-                      labelStyle: TextStyle(fontSize: 14),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(24)),
-                      prefixIcon: Icon(Icons.person),
-                    ),
-                    validator: (value) =>
-                        value!.isEmpty ? 'Please enter your name' : null,
+
+                // Name Field
+                _buildTextField(_nameController, 'Name', Icons.person),
+                SizedBox(height: 20),
+
+                // Gender Dropdown
+                DropdownButtonFormField<String>(
+                  value: _selectedGender,
+                  decoration: InputDecoration(
+                    labelText: 'Gender',
+                    labelStyle: TextStyle(fontSize: 14),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(24)),
+                    prefixIcon: Icon(Icons.person_outline),
                   ),
+                  items: ['Male', 'Female', 'Other']
+                      .map((gender) => DropdownMenuItem(
+                            value: gender,
+                            child: Text(gender),
+                          ))
+                      .toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedGender = value;
+                    });
+                  },
+                  validator: (value) => value == null ? 'Please select your gender' : null,
                 ),
-                SizedBox(height: 27),
-                Container(
-                  width: 332,
-                  height: 48,
-                  child: TextFormField(
-                    controller: _ageController,
-                    decoration: InputDecoration(
-                      labelText: 'Age',
-                      labelStyle: TextStyle(fontSize: 14),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(24)),
-                      prefixIcon: Icon(Icons.calendar_today),
-                    ),
-                    keyboardType: TextInputType.number,
-                    validator: (value) =>
-                        value!.isEmpty ? 'Please enter your age' : null,
-                  ),
-                ),
-                SizedBox(height: 27),
+                SizedBox(height: 20),
+
+                // Age Field
+                _buildTextField(_ageController, 'Age', Icons.calendar_today, isNumber: true),
+                SizedBox(height: 20),
+
+                // Weight & Height Fields
                 Row(
                   children: [
-                    Padding(
-                      padding: EdgeInsets.only(left: 20), // Add left padding to the weight field
-                      child: Flexible(
-                        flex: 1,
-                        child: Container(
-                          width: 160,
-                          height: 48,
-                          child: TextFormField(
-                            controller: _weightController,
-                            decoration: InputDecoration(
-                              labelText: 'Weight (kg)',
-                              labelStyle: TextStyle(fontSize: 14),
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(24)),
-                              prefixIcon: Icon(Icons.monitor_weight_sharp),
-                            ),
-                            keyboardType: TextInputType.number,
-                            validator: (value) =>
-                                value!.isEmpty ? 'Enter weight' : null,
-                          ),
-                        ),
-                      ),
-                    ),
+                    Expanded(child: _buildTextField(_weightController, 'Weight (kg)', Icons.monitor_weight, isNumber: true)),
                     SizedBox(width: 10),
-                    Flexible(
-                      flex: 1,
-                      child: Container(
-                        width: 160,
-                        height: 48,
-                        child: TextFormField(
-                          controller: _heightController,
-                          decoration: InputDecoration(
-                            labelText: 'Height (cm)',
-                            labelStyle: TextStyle(fontSize: 14),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(24)),
-                            prefixIcon: Icon(Icons.height),
-                          ),
-                          keyboardType: TextInputType.number,
-                          validator: (value) =>
-                              value!.isEmpty ? 'Enter height' : null,
-                        ),
-                      ),
-                    ),
+                    Expanded(child: _buildTextField(_heightController, 'Height (cm)', Icons.height, isNumber: true)),
                   ],
                 ),
-                SizedBox(height: 227),
+                SizedBox(height: 60),
+
+                // Submit Button
                 _isSubmitting
-                  ? const CircularProgressIndicator()
-                  : ElevatedButton(
-                    onPressed: _submitForm,
-                    style: ElevatedButton.styleFrom(
-                      foregroundColor: Colors.white, backgroundColor: Color(0xFF008080),
-                      fixedSize: Size(314, 48),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(24),
+                    ? CircularProgressIndicator()
+                    : ElevatedButton(
+                        onPressed: _submitForm,
+                        style: ElevatedButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          backgroundColor: Color(0xFF008080),
+                          fixedSize: Size(314, 48),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(24),
+                          ),
+                        ),
+                        child: Text('Next', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
                       ),
-                    ),
-                  child: Text('Next', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
-                ),
               ],
             ),
           ),
         ),
       ),
+    );
+  }
+
+  // Helper method for text fields
+  Widget _buildTextField(TextEditingController controller, String label, IconData icon, {bool isNumber = false}) {
+    return TextFormField(
+      controller: controller,
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: TextStyle(fontSize: 14),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(24)),
+        prefixIcon: Icon(icon),
+      ),
+      keyboardType: isNumber ? TextInputType.number : TextInputType.text,
+      validator: (value) => value!.isEmpty ? 'Please enter your $label' : null,
     );
   }
 }
@@ -309,9 +259,8 @@ class _Input_2PageState extends State<Input_2Page > {
         return;
       }
 
-    // Convert workout level to a descriptive string
-    String workoutLevelString = _convertWorkoutLevelToString(workoutLevel);
-
+      // Convert workout level to a descriptive string
+      String workoutLevelString = _convertWorkoutLevelToString(workoutLevel);
 
       // Store data in Firestore
       await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
@@ -330,14 +279,13 @@ class _Input_2PageState extends State<Input_2Page > {
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Profile Updated Successfully!')),
+        const SnackBar(content: Text('Profile Created Successfully!')),
       );
 
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => LoginPage()),
+        MaterialPageRoute(builder: (context) => MainPage()),
       );
-
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: ${e.toString()}')),
@@ -374,7 +322,6 @@ class _Input_2PageState extends State<Input_2Page > {
               ),
               SizedBox(height: 15),
               Text("Food Allergies"),
-              
               SizedBox(height: 5),
               Container(
                 width: 332,
@@ -411,11 +358,11 @@ class _Input_2PageState extends State<Input_2Page > {
                   Expanded(
                     child: Column(
                       children: [
-                        CheckboxListTile(                 
+                        CheckboxListTile(
                           visualDensity: VisualDensity(horizontal: -4, vertical: -4), // Reduces spacing inside checkbox
                           contentPadding: EdgeInsets.only(right: 25, left: 25, top: 0),
                           title: Text("Weight Loss", style: TextStyle(fontSize: 12)),
-                          value: option1,          
+                          value: option1,
                           onChanged: (bool? value) {
                             setState(() {
                               option1 = value!;
@@ -501,18 +448,19 @@ class _Input_2PageState extends State<Input_2Page > {
               ),
               SizedBox(height: 45),
               _isSubmitting
-                ? const CircularProgressIndicator()
-                :ElevatedButton(
-                  onPressed: _submitForm,
-                  child: Text('Save', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
-                  style: ElevatedButton.styleFrom(
-                    foregroundColor: Colors.white, backgroundColor: Color(0xFF008080),
-                    fixedSize: Size(314, 48),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(24),
+                  ? const CircularProgressIndicator()
+                  : ElevatedButton(
+                      onPressed: _submitForm,
+                      child: Text('Save', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+                      style: ElevatedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        backgroundColor: Color(0xFF008080),
+                        fixedSize: Size(314, 48),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(24),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
             ],
           ),
         ),

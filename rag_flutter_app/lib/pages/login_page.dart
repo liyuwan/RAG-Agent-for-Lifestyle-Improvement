@@ -52,17 +52,15 @@ class _LoginPageState extends State<LoginPage> {
         password: _passwordController.text,
       );
 
-      String name = _emailController.text.trim().split('@')[0];
       FirebaseFirestore.instance
           .collection('users')
           .doc(userCredential.user!.uid)
           .set({
-        'name': name,
-        'age': 22,
-        'calories_burned': 467,
-        'heart_rate': 92,
-        'steps': 1423,
-        'weight': 114,
+        'name': null,
+        'age': 0,
+        'weight': 0,
+        'height': 0,
+        'profile_image': null,
         'last_updated': FieldValue.serverTimestamp(),
       });
 
@@ -114,7 +112,7 @@ class _LoginPageState extends State<LoginPage> {
         ),
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(25.0),
+            padding: const EdgeInsets.all(20.0),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -125,7 +123,7 @@ class _LoginPageState extends State<LoginPage> {
                 const SizedBox(height: 20), // Add some spacing
                 Card(
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30)),
+                      borderRadius: BorderRadius.circular(25)),
                   elevation: 10,
                   child: Padding(
                     padding: const EdgeInsets.all(25),
@@ -137,8 +135,8 @@ class _LoginPageState extends State<LoginPage> {
                               ? 'Create an Account'
                               : 'Welcome Back!',
                           style: const TextStyle(
-                              fontSize: 26,
-                              fontWeight: FontWeight.bold,
+                              fontSize: 20,
+                              fontWeight: FontWeight.w600,
                               color: Colors.black87),
                         ),
                         const SizedBox(height: 20),
@@ -153,17 +151,18 @@ class _LoginPageState extends State<LoginPage> {
                           _buildTextField(_confirmPasswordController,
                               'Confirm Password', Icons.lock, true,
                               isConfirm: true),
-                        Align(
+                        _isRegistering ? SizedBox() : Align(
                           alignment: Alignment.center,
                           child: TextButton(
                             onPressed: _resetPassword,
                             child: const Text(
                               'Forgot Password?',
                               style: TextStyle(
-                                  fontSize: 16, color: Colors.black54),
+                                  fontSize: 15, color: Colors.black54),
                             ),
                           ),
                         ),
+                        SizedBox(height: 15),
                         _isLoading
                             ? const CircularProgressIndicator(
                                 color: Color(0xFF008080))
@@ -193,36 +192,31 @@ class _LoginPageState extends State<LoginPage> {
                                     ),
                                   ),
 
-                                  const SizedBox(height: 15),
+                                  const SizedBox(height: 10),
 
                                   // "Or Log in with" section
                                   Row(
                                     children: [
                                       Expanded(
                                         child: Divider(
-                                          color: Colors.black54,
-                                          thickness: 1,
+                                          color: Colors.grey[300],
+                                          thickness: 2,
                                           indent: 20,
                                           endIndent: 10,
                                         ),
                                       ),
-                                      const Text(
-                                        'or log in with',
-                                        style: TextStyle(
-                                            color: Colors.black54,
-                                            fontSize: 16),
-                                      ),
+                                      Text('Or', style: TextStyle(color: Colors.grey[500])),
                                       Expanded(
                                         child: Divider(
-                                          color: Colors.black54,
-                                          thickness: 1,
-                                          indent: 10,
-                                          endIndent: 20,
+                                          color: Colors.grey[300],
+                                          thickness: 2,
+                                          indent: 20,
+                                          endIndent: 10,
                                         ),
                                       ),
                                     ],
                                   ),
-                                  const SizedBox(height: 15),
+                                  const SizedBox(height: 10),
 
                                   ElevatedButton.icon(
                                     onPressed: () async {
@@ -233,8 +227,7 @@ class _LoginPageState extends State<LoginPage> {
                                         Navigator.pushReplacement(
                                           context,
                                           MaterialPageRoute(
-                                              builder: (context) =>
-                                                  const MainPage()),
+                                              builder: (context) => _isRegistering ? const InputPage() : const MainPage()),
                                         );
                                       } else {
                                         ScaffoldMessenger.of(context)
@@ -247,9 +240,7 @@ class _LoginPageState extends State<LoginPage> {
                                     },
                                     icon: Image.asset('assets/google_logo.png',
                                         height: 24),
-                                    label: const Text('Sign in with Google',
-                                        style:
-                                            TextStyle(color: Colors.black87)),
+                                    label: _isRegistering ? Text('Register with Google', style: TextStyle(color: Colors.black87)) : Text('Log in with Google', style: TextStyle(color: Colors.black87)),
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: Colors.white,
                                       shape: RoundedRectangleBorder(
@@ -280,7 +271,7 @@ class _LoginPageState extends State<LoginPage> {
                                           ? 'Already have an account? Login'
                                           : 'Don’t have an account? Register',
                                       style: const TextStyle(
-                                          fontSize: 16, color: Colors.black54),
+                                          fontSize: 15, color: Colors.black54),
                                     ),
                                   ),
                                 ],

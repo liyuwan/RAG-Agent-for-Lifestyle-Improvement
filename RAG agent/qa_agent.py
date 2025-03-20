@@ -86,6 +86,7 @@ def call_rag_agent(query, userId):
             biometric_info = (
                 f"User's Biometric Data:\n"
                 f"- Name: {biometric_data.get('name', 'N/A')}\n"
+                f"- Gender: {biometric_data.get('gender', 'N/A')}\n"
                 f"- Age: {biometric_data.get('age', 'N/A')} years\n"
                 f"- Height: {biometric_data.get('height', 'N/A')} cm\n"
                 f"- Weight: {biometric_data.get('weight', 'N/A')} kg\n"
@@ -180,6 +181,7 @@ def call_rag_agent(query, userId):
                 biometric_info = (
                     f"User's Biometric Data:\n"
                     f"- Name: {biometric_data.get('name', 'N/A')}\n"
+                    f"- Gender: {biometric_data.get('gender', 'N/A')}\n"
                     f"- Age: {biometric_data.get('age', 'N/A')} years\n"
                     f"- Height: {biometric_data.get('height', 'N/A')} cm\n"
                     f"- Weight: {biometric_data.get('weight', 'N/A')} kg\n"

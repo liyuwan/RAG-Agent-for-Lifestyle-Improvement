@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
+import '../widgets/settings_button.dart';
 import 'dart:convert';
-import '../widgets/menu_bar_icon.dart';
 
 class WorkoutPlanPage extends StatefulWidget {
   const WorkoutPlanPage({super.key});
@@ -111,7 +111,7 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
             style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.grey[200]),
           ),
           const Spacer(),
-          MenuBarIcon(),
+          SettingsButton(),
         ],
       ),
     );

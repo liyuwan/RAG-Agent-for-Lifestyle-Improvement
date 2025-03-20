@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
-import '../widgets/menu_bar_icon.dart';
+import 'package:rag_flutter_app/widgets/settings_button.dart';
 import 'package:health/health.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'dart:io';
@@ -608,7 +608,7 @@ class _ProgressPageState extends State<ProgressPage> {
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 25.0, bottom: 5.0),
-            child: MenuBarIcon(),
+            child: SettingsButton(),
           ),
         ],
       ),

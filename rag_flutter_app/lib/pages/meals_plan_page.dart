@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:convert';
 import 'package:intl/intl.dart';
-import '../widgets/menu_bar_icon.dart';
+import '../widgets/settings_button.dart';
 
 class MealsPlanPage extends StatefulWidget {
   const MealsPlanPage({super.key});
@@ -109,7 +109,7 @@ class _MealsPlanPageState extends State<MealsPlanPage> {
             style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.black),
           ),
           const Spacer(),
-          MenuBarIcon(),
+          SettingsButton(),
         ],
       ),
     );
