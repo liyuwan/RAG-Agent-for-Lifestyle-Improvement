@@ -106,9 +106,40 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
       padding: const EdgeInsets.symmetric(horizontal: 35),
       child: Row(
         children: [
+          FutureBuilder<DocumentSnapshot>(
+            future: FirebaseFirestore.instance
+                .collection('users')
+                .doc(FirebaseAuth.instance.currentUser?.uid)
+                .get(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return CircleAvatar(
+                  radius: 20,
+                  backgroundColor: Colors.teal[50],
+                  child: CircularProgressIndicator(color: Colors.teal),
+                );
+              }
+              if (snapshot.hasError || !snapshot.hasData || !snapshot.data!.exists) {
+                return CircleAvatar(
+                  radius: 20,
+                  backgroundColor: Colors.teal[50],
+                  backgroundImage: AssetImage("assets/default_profile.png"),
+                );
+              }
+              String? profileImageUrl = snapshot.data!['profileImage'];
+              return CircleAvatar(
+                radius: 20,
+                backgroundColor: Colors.teal[50],
+                backgroundImage: profileImageUrl != null && profileImageUrl.isNotEmpty
+                    ? AssetImage(profileImageUrl)
+                    : AssetImage("assets/default_profile.png"),
+              );
+            },
+          ),
+          SizedBox(width: 15),
           Text(
             "Welcome back,\n$username", // Display the username here
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.grey[200]),
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white),
           ),
           const Spacer(),
           SettingsButton(),
@@ -166,7 +197,7 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
                     margin: const EdgeInsets.symmetric(horizontal: 4),
                     decoration: BoxDecoration(
                       color: isSelected ? Colors.white : Colors.transparent,
-                      borderRadius: BorderRadius.circular(28), // Increased border radius
+                      borderRadius: BorderRadius.circular(28),
                     ),
                     alignment: Alignment.center,
                     child: Column(
@@ -303,7 +334,7 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
         margin: const EdgeInsets.all(10),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
-          color: Colors.blueGrey[50],
+          color: Colors.teal[50],
         ),
         child: Padding(
           padding: const EdgeInsets.only(
@@ -311,12 +342,15 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                "Workout Plan",
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.lightGreen, // Header color changed to teal
+              Padding(
+                padding: const EdgeInsets.only(left: 15),
+                child: const Text(
+                  "Workout Plan",
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black, // Header color changed to teal
+                  ),
                 ),
               ),
               Padding(
@@ -418,11 +452,14 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
               children: [
                 // Background image (Positioned to align from top)
                 Positioned.fill(
-                  child: Image.asset(
-                    'assets/workoutplan-banner.png', // Image path
-                    fit: BoxFit.none, // Ensures full width without cropping
-                    alignment:
-                        Alignment.topCenter, // Aligns the image from the top
+                  child: Opacity(
+                    opacity: 0.9,
+                    child: Image.asset(
+                      'assets/workoutplan-banner.png', // Image path
+                      fit: BoxFit.none, // Ensures full width without cropping
+                      alignment:
+                          Alignment.topCenter, // Aligns the image from the top
+                    ),
                   ),
                 ),
 

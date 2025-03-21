@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '/pages/login_page.dart';
 import '/pages/preferences_page.dart';
 import '/pages/profile_page.dart';
@@ -7,11 +8,11 @@ import '/pages/profile_page.dart';
 Widget _buildProfileSection(BuildContext context) {
   return GestureDetector(
     onTap: () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const ProfilePage()), // Make sure to import ProfilePage
-    );
-  },
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const ProfilePage()), // Navigate to ProfilePage
+      );
+    },
     child: Container(
       height: 78,
       padding: EdgeInsets.all(18),
@@ -30,15 +31,43 @@ Widget _buildProfileSection(BuildContext context) {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.start,
         children: [
-          CircleAvatar(
-            radius: 20,
-            backgroundColor: Colors.teal[50],
-            child: Icon(Icons.person, color: Colors.teal,),
+          FutureBuilder<DocumentSnapshot>(
+            future: FirebaseFirestore.instance
+                .collection('users')
+                .doc(FirebaseAuth.instance.currentUser?.uid)
+                .get(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return CircleAvatar(
+                  radius: 20,
+                  backgroundColor: Colors.teal[50],
+                  child: CircularProgressIndicator(color: Colors.teal),
+                );
+              }
+              if (snapshot.hasError || !snapshot.hasData || !snapshot.data!.exists) {
+                return CircleAvatar(
+                  radius: 20,
+                  backgroundColor: Colors.teal[50],
+                  backgroundImage: AssetImage("assets/default_profile.png"),
+                );
+              }
+              String? profileImageUrl = snapshot.data!['profileImage'];
+              return CircleAvatar(
+                radius: 20,
+                backgroundColor: Colors.teal[50],
+                backgroundImage: profileImageUrl != null && profileImageUrl.isNotEmpty
+                    ? AssetImage(profileImageUrl)
+                    : AssetImage("assets/default_profile.png"),
+              );
+            },
           ),
-          SizedBox(width: 20,),
-          Text('Profile', style: TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.w500),),
+          SizedBox(width: 20),
+          Text(
+            'Profile',
+            style: TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.w500),
+          ),
           Spacer(),
-          Icon(Icons.arrow_forward_ios, color: Colors.grey,),
+          Icon(Icons.arrow_forward_ios, color: Colors.grey),
         ],
       ),
     ),

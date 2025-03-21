@@ -104,9 +104,40 @@ class _MealsPlanPageState extends State<MealsPlanPage> {
       padding: const EdgeInsets.symmetric(horizontal: 35),
       child: Row(
         children: [
+          FutureBuilder<DocumentSnapshot>(
+            future: FirebaseFirestore.instance
+                .collection('users')
+                .doc(FirebaseAuth.instance.currentUser?.uid)
+                .get(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return CircleAvatar(
+                  radius: 20,
+                  backgroundColor: Colors.teal[50],
+                  child: CircularProgressIndicator(color: Colors.teal),
+                );
+              }
+              if (snapshot.hasError || !snapshot.hasData || !snapshot.data!.exists) {
+                return CircleAvatar(
+                  radius: 20,
+                  backgroundColor: Colors.teal[50],
+                  backgroundImage: AssetImage("assets/default_profile.png"),
+                );
+              }
+              String? profileImageUrl = snapshot.data!['profileImage'];
+              return CircleAvatar(
+                radius: 20,
+                backgroundColor: Colors.teal[50],
+                backgroundImage: profileImageUrl != null && profileImageUrl.isNotEmpty
+                    ? AssetImage(profileImageUrl)
+                    : AssetImage("assets/default_profile.png"),
+              );
+            },
+          ),
+          SizedBox(width: 15),
           Text(
             "Welcome back,\n$username", // Display the username here
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.black),
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black),
           ),
           const Spacer(),
           SettingsButton(),
@@ -348,11 +379,14 @@ class _MealsPlanPageState extends State<MealsPlanPage> {
               children: [
                 // Background image (Positioned to align from top)
                 Positioned.fill(
-                  child: Image.asset(
-                    'assets/mealplan-banner.png', // Replace with your image path
-                    fit: BoxFit.none, // Ensures full width without cropping
-                    alignment:
-                        Alignment.topCenter, // Aligns the image from the top
+                  child: Opacity(
+                    opacity: 0.8,
+                    child: Image.asset(
+                      'assets/mealplan-banner.png', // Replace with your image path
+                      fit: BoxFit.none, // Ensures full width without cropping
+                      alignment:
+                          Alignment.topCenter, // Aligns the image from the top
+                    ),
                   ),
                 ),
 
@@ -399,7 +433,6 @@ class _MealsPlanPageState extends State<MealsPlanPage> {
               ],
             ),
           ),
-          SizedBox(height: 15),
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: getMealPlansForDate(selectedDate),
