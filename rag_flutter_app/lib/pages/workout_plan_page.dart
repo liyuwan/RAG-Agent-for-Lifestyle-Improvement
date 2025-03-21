@@ -288,41 +288,89 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
 
   Future<void> _saveCompletedExercises(String userId, DateTime targetDate, Map<String, bool> completedExercises, List<Map<String, dynamic>> allExercises) async {
     try {
-      // Ensure all exercises are included in the completedExercises map
+      // Ensure all exercises are included
       for (var exercise in allExercises) {
-        if (!completedExercises.containsKey(exercise['exercise'])) {
-          completedExercises[exercise['exercise']] = false;
+        completedExercises.putIfAbsent(exercise['exercise'], () => false);
+      }
+
+      bool allCompleted = completedExercises.values.every((v) => v);
+
+      // Fetch user data
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+      final data = userDoc.data() ?? {};
+      
+      int currentStreak = data['consistencyStreak'] ?? 0;
+      int highestStreak = data['highestStreak'] ?? 0;
+      DateTime? lastStreakDate = (data['lastStreakDate'] as Timestamp?)?.toDate();
+      DateTime? highestStreakDate = (data['highestStreakDate'] as Timestamp?)?.toDate();
+
+      // Helper function for date comparison
+      bool isSameDay(DateTime? a, DateTime? b) {
+        if (a == null || b == null) return false;
+        return a.year == b.year && a.month == b.month && a.day == b.day;
+      }
+
+      // Calculate new values
+      int newStreak = currentStreak;
+      int newHighestStreak = highestStreak;
+      DateTime? newLastStreakDate = lastStreakDate;
+      DateTime? newHighestStreakDate = highestStreakDate;
+
+      if (allCompleted) {
+        // Handle exercise completion
+        final isConsecutive = lastStreakDate != null && 
+            targetDate.difference(lastStreakDate).inDays == 1;
+        
+        newStreak = isConsecutive ? currentStreak + 1 : 1;
+        newLastStreakDate = targetDate;
+
+        // Update highest streak only if new streak exceeds previous record
+        if (newStreak > highestStreak) {
+          newHighestStreak = newStreak;
+          newHighestStreakDate = targetDate;
+        }
+      } else {
+        // Handle exercise unchecking
+        if (isSameDay(lastStreakDate, targetDate)) {
+          // Only modify if unchecking the last streak day
+          newStreak = currentStreak > 0 ? currentStreak - 1 : 0;
+          newLastStreakDate = lastStreakDate?.subtract(Duration(days: 1));
+
+          // Roll back highest streak only if it was set on the uncheck date
+          if (isSameDay(highestStreakDate, targetDate)) {
+            newHighestStreak = newStreak;
+            newHighestStreakDate = newLastStreakDate;
+          }
         }
       }
 
-      // Check if all exercises are completed
-      bool allCompleted = completedExercises.values.every((value) => value == true);
-
-      // Fetch the current consistency streak
-      final userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
-      int currentStreak = userDoc.data()?['consistencyStreak'] ?? 0;
-
-      // Update the consistency streak
-      int newStreak = allCompleted ? currentStreak + 1 : 0;
-
-      await FirebaseFirestore.instance
+      // Update Firestore documents
+      final completionsRef = FirebaseFirestore.instance
           .collection('users')
           .doc(userId)
           .collection('exercise_completions')
-          .doc(DateFormat('yyyy-MM-dd').format(targetDate))
-          .set({
+          .doc(DateFormat('yyyy-MM-dd').format(targetDate));
+
+      await completionsRef.set({
         'date': targetDate,
         'completed_exercises': completedExercises,
       });
 
       await FirebaseFirestore.instance.collection('users').doc(userId).update({
         'consistencyStreak': newStreak,
+        'lastStreakDate': newLastStreakDate != null 
+            ? Timestamp.fromDate(newLastStreakDate)
+            : null,
+        'highestStreak': newHighestStreak,
+        'highestStreakDate': newHighestStreakDate != null 
+            ? Timestamp.fromDate(newHighestStreakDate)
+            : null,
       });
     } catch (e) {
-      print('Error saving completed exercises: $e');
+      print('Error saving exercises: $e');
     }
   }
-
+  
   /// Build workout plan card with a toggleable checkmark
   Widget buildWorkoutPlanCard(Map<String, dynamic> data) {
     try {

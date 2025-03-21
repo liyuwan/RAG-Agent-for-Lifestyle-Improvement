@@ -21,6 +21,7 @@ class _ProgressPageState extends State<ProgressPage> {
   String _weight = '';
   String _height = '';
   int _consistencyStreak = 0;
+  int _highestStreak = 0;
   List<FlSpot> _caloriesConsumedSpots = [];
 
   //From HealthKit
@@ -68,12 +69,14 @@ class _ProgressPageState extends State<ProgressPage> {
           _weight = userDoc.data()?['weight']?.toString() ?? 'N/A';
           _height = userDoc.data()?['height']?.toString() ?? 'N/A';
           _consistencyStreak = userDoc.data()?['consistencyStreak'] ?? 0;
+          _highestStreak = userDoc.data()?['highestStreak'] ?? 0;
         });
       } else {
         setState(() {
           _weight = 'N/A';
           _height = 'N/A';
           _consistencyStreak = 0;
+          _highestStreak = 0;
         });
       }
 
@@ -124,6 +127,7 @@ class _ProgressPageState extends State<ProgressPage> {
         _caloriesBurnt = 'Error';
         _steps = 'Error';
         _consistencyStreak = 0;
+        _highestStreak = 0;
       });
       debugPrint('Error fetching biometric data: $e');
     }
@@ -315,6 +319,31 @@ class _ProgressPageState extends State<ProgressPage> {
               ),
             ],
           ),
+          SizedBox(height: 10.0),
+          Row(
+            children: [
+              Icon(Icons.fitness_center, color: Colors.orange),
+              SizedBox(width: 10.0),
+              RichText(
+                text: TextSpan(
+                  children: [
+                    TextSpan(
+                        text: 'Current consistency streak: ',
+                        style: TextStyle(
+                            fontSize: 13.0,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black)),
+                    TextSpan(
+                        text: '$_consistencyStreak days',
+                        style: TextStyle(
+                            fontSize: 13.0,
+                            fontWeight: FontWeight.normal,
+                            color: Colors.black)),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -364,13 +393,13 @@ class _ProgressPageState extends State<ProgressPage> {
                 text: TextSpan(
                   children: [
                     TextSpan(
-                        text: 'Consistency streak: ',
+                        text: 'Highest streak: ',
                         style: TextStyle(
                             fontSize: 13.0,
                             fontWeight: FontWeight.bold,
                             color: Colors.black)),
                     TextSpan(
-                        text: '$_consistencyStreak days',
+                        text: '$_highestStreak days',
                         style: TextStyle(
                             fontSize: 13.0,
                             fontWeight: FontWeight.normal,
@@ -620,11 +649,11 @@ class _ProgressPageState extends State<ProgressPage> {
             child: Column(
               children: [
                 _buildUserCurrentDataSection(),
-                SizedBox(height: 15.0),
+                SizedBox(height: 10.0),
                 _buildAchievementSection(),
-                SizedBox(height: 15.0),
+                SizedBox(height: 10.0),
                 _buildMotivationalQuoteSection(),
-                SizedBox(height: 18.0),
+                SizedBox(height: 13.0),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.start,
                   children: [
