@@ -23,6 +23,7 @@ class _ProgressPageState extends State<ProgressPage> {
   int _consistencyStreak = 0;
   int _highestStreak = 0;
   List<FlSpot> _caloriesConsumedSpots = [];
+  List<double> _exerciseCompletionPercentages = [];
 
   //From HealthKit
   String _caloriesBurnt = '';
@@ -116,9 +117,13 @@ class _ProgressPageState extends State<ProgressPage> {
         caloriesBurntSpots.add(FlSpot(i.toDouble(), burnt));
       }
 
+      // Fetch exercise completion data
+      List<double> exerciseCompletionPercentages = await _fetchExerciseCompletionData(startDate, now);
+
       setState(() {
         _caloriesConsumedSpots = caloriesConsumedSpots;
         _caloriesBurntSpots = caloriesBurntSpots;
+        _exerciseCompletionPercentages = exerciseCompletionPercentages;
       });
     } catch (e) {
       setState(() {
@@ -206,6 +211,45 @@ class _ProgressPageState extends State<ProgressPage> {
         _steps = 'Error';
       });
       debugPrint('Error fetching health data: $e');
+    }
+  }
+
+  Future<List<double>> _fetchExerciseCompletionData(DateTime startDate, DateTime now) async {
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) {
+        throw 'No user is logged in';
+      }
+
+      final exerciseCompletionData = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(currentUser.uid)
+          .collection('exercise_completions')
+          .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate))
+          .orderBy('date', descending: false)
+          .get();
+
+      Map<DateTime, double> completionMap = {};
+      for (var doc in exerciseCompletionData.docs) {
+        DateTime date = (doc.data()['date'] as Timestamp).toDate();
+        date = DateTime(date.year, date.month, date.day); // Normalize to midnight
+        Map<String, dynamic> completedExercises = doc.data()['completed_exercises'] ?? {};
+        int totalExercises = completedExercises.length;
+        int completedCount = completedExercises.values.where((v) => v == true).length;
+        double completionPercentage = totalExercises > 0 ? (completedCount / totalExercises) * 100 : 0.0;
+        completionMap[date] = completionPercentage;
+      }
+
+      List<double> completionPercentages = [];
+      for (int i = 0; i < 7; i++) {
+        DateTime day = startDate.add(Duration(days: i));
+        completionPercentages.add(completionMap[day] ?? 0.0); // Default to 0% if no data
+      }
+
+      return completionPercentages;
+    } catch (e) {
+      debugPrint('Error fetching exercise completion data: $e');
+      return List.filled(7, 0.0); // Return 0% for all days in case of error
     }
   }
 
@@ -616,6 +660,96 @@ class _ProgressPageState extends State<ProgressPage> {
       ),
     );
   }
+
+  Widget _buildExerciseCompletionChart() {
+    return Column(
+      children: [
+        SizedBox(
+          height: 200,
+          child: Card(
+            elevation: 0,
+            color: Colors.white,
+            child: Padding(
+              padding: const EdgeInsets.only(left: 5.0, right: 15.0),
+              child: BarChart(
+                BarChartData(
+                  barGroups: List.generate(7, (index) {
+                    return BarChartGroupData(
+                      x: index,
+                      barRods: [
+                        BarChartRodData(
+                          toY: _exerciseCompletionPercentages[index],
+                          gradient: LinearGradient(
+                            colors: [Colors.green, Colors.lightGreen],
+                            begin: Alignment.bottomCenter,
+                            end: Alignment.topCenter,
+                          ),
+                          width: 15,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ],
+                    );
+                  }),
+                  borderData: FlBorderData(show: false),
+                  gridData: FlGridData(
+                    show: true,
+                    drawVerticalLine: false,
+                    horizontalInterval: 20,
+                    getDrawingHorizontalLine: (value) {
+                      return FlLine(
+                        color: Colors.blueGrey[100],
+                        strokeWidth: 0.5,
+                        dashArray: [5],
+                      );
+                    },
+                  ),
+                  titlesData: FlTitlesData(
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        interval: 1,
+                        getTitlesWidget: (value, meta) {
+                          int index = value.toInt();
+                          if (index >= 0 && index < 7) {
+                            DateTime day = DateTime.now().subtract(Duration(days: 6 - index));
+                            return Text(
+                              DateFormat.E().format(day),
+                              style: TextStyle(fontSize: 10, color: Colors.black),
+                            );
+                          }
+                          return Text('');
+                        },
+                        reservedSize: 30,
+                      ),
+                    ),
+                    leftTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        interval: 20,
+                        getTitlesWidget: (value, meta) {
+                          return Text(
+                            '${value.toInt()}%',
+                            style: TextStyle(fontSize: 8.0, color: Colors.blueGrey),
+                          );
+                        },
+                        reservedSize: 30,
+                      ),
+                    ),
+                    rightTitles: AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
+                    topTitles: AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
   
   @override
   Widget build(BuildContext context) {
@@ -662,7 +796,7 @@ class _ProgressPageState extends State<ProgressPage> {
                       "Calories Overview",
                       style: TextStyle(
                           fontSize: 16.0,
-                          fontWeight: FontWeight.w700,
+                          fontWeight: FontWeight.w600,
                           color: Colors.black),
                     ),
                     Spacer(),
@@ -679,6 +813,32 @@ class _ProgressPageState extends State<ProgressPage> {
                 ),
                 SizedBox(height: 15.0),
                 _buildCaloriesOverviewChart(),
+                SizedBox(height: 25.0),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    SizedBox(width: 10.0),
+                    Text(
+                      "Exercise Completion Overview",
+                      style: TextStyle(
+                          fontSize: 16.0,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black),
+                    ),
+                    Spacer(),
+                    IconButton(
+                      onPressed: _getBiometricData,
+                      icon: Icon(
+                        Icons.refresh_rounded,
+                        color: Colors.blue[200],
+                      ),
+                      color: Colors.lightBlue[300],
+                      tooltip: 'Refresh Data',
+                    ),
+                  ],
+                ),
+                SizedBox(height: 15.0),
+                _buildExerciseCompletionChart(), // Add the new chart here
                 SizedBox(height: 100.0),
               ],
             ),
