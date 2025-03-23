@@ -41,6 +41,7 @@ flutter:
   assets:
     - assets/logo.png
     - assets/voice_chat.png
+    - assets/aiChat.png
     - assets/dumbell.png
     - assets/google_logo.png
     - assets/login_logo.png

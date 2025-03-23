@@ -17,11 +17,6 @@ class _ChatPageState extends State<ChatPage> {
   final ApiService apiService = ApiService(baseUrl: 'http://127.0.0.1:5000');
   final List<Map<String, dynamic>> _pendingMessages = [];
   final ScrollController _scrollController = ScrollController();
-
-  String _heartRate = '';
-  String _steps = '';
-  String _weight = '';
-
   late CollectionReference _chatHistoryCollection;
 
   @override
@@ -34,47 +29,10 @@ class _ChatPageState extends State<ChatPage> {
           .doc(currentUser.uid)
           .collection('chat_history');
     }
-    _getBiometricData();
-
     // Schedule initial scroll to bottom after first build
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _scrollToBottom();
     });
-  }
-
-  Future<void> _getBiometricData() async {
-    try {
-      final currentUser = FirebaseAuth.instance.currentUser;
-      if (currentUser == null) {
-        throw 'No user is logged in';
-      }
-
-      final userDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(currentUser.uid)
-          .get();
-
-      if (userDoc.exists) {
-        setState(() {
-          _heartRate = userDoc.data()?['heart_rate']?.toString() ?? 'N/A';
-          _steps = userDoc.data()?['steps']?.toString() ?? 'N/A';
-          _weight = userDoc.data()?['weight']?.toString() ?? 'N/A';
-        });
-      } else {
-        setState(() {
-          _heartRate = 'N/A';
-          _steps = 'N/A';
-          _weight = 'N/A';
-        });
-      }
-    } catch (e) {
-      setState(() {
-        _heartRate = 'Error';
-        _steps = 'Error';
-        _weight = 'Error';
-      });
-      debugPrint('Error fetching biometric data: $e');
-    }
   }
 
   Future<void> _sendMessage() async {
@@ -136,23 +94,24 @@ class _ChatPageState extends State<ChatPage> {
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
+        backgroundColor: Colors.white,
         title: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.favorite, color: Colors.red, size: 20),
-            const SizedBox(width: 4),
-            Text(_heartRate,
-                style: const TextStyle(fontSize: 12, color: Colors.black)),
-            const SizedBox(width: 50),
-            Icon(Icons.directions_walk, color: Colors.blue, size: 20),
-            const SizedBox(width: 4),
-            Text(_steps,
-                style: const TextStyle(fontSize: 12, color: Colors.black)),
-            const SizedBox(width: 50),
-            Icon(Icons.scale, color: Colors.green, size: 20),
-            const SizedBox(width: 4),
-            Text('$_weight kg',
-                style: const TextStyle(fontSize: 12, color: Colors.black)),
+            const Text(
+              'AI Chat',
+              style: TextStyle(
+                color: Colors.black,
+                fontSize: 22,
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+            const SizedBox(width: 15),
+            Image.asset(
+              'assets/aiChat.png', // Make sure this path matches your actual asset
+              width: 26,
+              height: 26,
+            ),
           ],
         ),
       ),
@@ -219,7 +178,7 @@ class _ChatPageState extends State<ChatPage> {
                         decoration: BoxDecoration(
                           color: isUser
                               ? const Color(0xFF008080)
-                              : const Color(0xFFD9D9D9),
+                              : Colors.teal[50]?.withOpacity(0.6),
                           borderRadius: BorderRadius.only(
                             topLeft: const Radius.circular(16),
                             topRight: const Radius.circular(16),
@@ -282,46 +241,43 @@ class _ChatPageState extends State<ChatPage> {
                     height: 30,
                   ),
                   onPressed: () async {
-                    await Navigator.push(
+                    final result = await Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => VoiceChatScreen(
-                          onNewMessage: (message) async {
-                            setState(() {
-                              _pendingMessages.add({
-                                'sender': 'user',
-                                'text': message['text']!,
-                                'isPending': false,
-                              });
-                              _pendingMessages.add({
-                                'sender': 'bot',
-                                'text': '',
-                                'isPending': true,
-                              });
-                            });
-                            try {
-                              await apiService
-                                  .getResponseFromApi(message['text']!);
-                              setState(() {
-                                _pendingMessages.removeWhere(
-                                    (msg) => msg['isPending'] == true);
-                              });
-                            } catch (e) {
-                              setState(() {
-                                _pendingMessages.removeWhere(
-                                    (msg) => msg['isPending'] == true);
-                                _pendingMessages.add({
-                                  'sender': 'bot',
-                                  'text': 'Error: $e',
-                                  'isPending': false,
-                                });
-                              });
-                              debugPrint('Error sending voice message: $e');
-                            }
-                          },
-                        ),
+                        builder: (context) => VoiceChatScreen(),
                       ),
                     );
+
+                    if (result != null) {
+                      setState(() {
+                        for (var message in result) {
+                          bool alreadyExistsInPending = _pendingMessages.any(
+                              (msg) =>
+                                  msg['text'] == message['text'] &&
+                                  msg['sender'] == message['sender']);
+
+                          bool alreadyExistsInChatHistory = false;
+
+                          // Only add message if not already in pending or chat history
+                          if (!alreadyExistsInPending) {
+                            _chatHistoryCollection
+                                .where('user_input', isEqualTo: message['text'])
+                                .get()
+                                .then((querySnapshot) {
+                              if (querySnapshot.docs.isNotEmpty) {
+                                alreadyExistsInChatHistory = true;
+                              }
+
+                              // Only add if it's not in Firestore
+                              if (!alreadyExistsInChatHistory) {
+                                _pendingMessages.add(message);
+                              }
+
+                            });
+                          }
+                        }
+                      });
+                    }
                   },
                 ),
                 const SizedBox(width: 8),
