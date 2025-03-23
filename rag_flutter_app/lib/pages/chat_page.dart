@@ -17,11 +17,6 @@ class _ChatPageState extends State<ChatPage> {
   final ApiService apiService = ApiService(baseUrl: 'http://127.0.0.1:5000');
   final List<Map<String, dynamic>> _pendingMessages = [];
   final ScrollController _scrollController = ScrollController();
-
-  String _heartRate = '';
-  String _steps = '';
-  String _weight = '';
-
   late CollectionReference _chatHistoryCollection;
 
   @override
@@ -34,47 +29,10 @@ class _ChatPageState extends State<ChatPage> {
           .doc(currentUser.uid)
           .collection('chat_history');
     }
-    _getBiometricData();
-
     // Schedule initial scroll to bottom after first build
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _scrollToBottom();
     });
-  }
-
-  Future<void> _getBiometricData() async {
-    try {
-      final currentUser = FirebaseAuth.instance.currentUser;
-      if (currentUser == null) {
-        throw 'No user is logged in';
-      }
-
-      final userDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(currentUser.uid)
-          .get();
-
-      if (userDoc.exists) {
-        setState(() {
-          _heartRate = userDoc.data()?['heart_rate']?.toString() ?? 'N/A';
-          _steps = userDoc.data()?['steps']?.toString() ?? 'N/A';
-          _weight = userDoc.data()?['weight']?.toString() ?? 'N/A';
-        });
-      } else {
-        setState(() {
-          _heartRate = 'N/A';
-          _steps = 'N/A';
-          _weight = 'N/A';
-        });
-      }
-    } catch (e) {
-      setState(() {
-        _heartRate = 'Error';
-        _steps = 'Error';
-        _weight = 'Error';
-      });
-      debugPrint('Error fetching biometric data: $e');
-    }
   }
 
   Future<void> _sendMessage() async {
@@ -136,17 +94,26 @@ class _ChatPageState extends State<ChatPage> {
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Colors.teal.shade700, Colors.teal.shade400],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+        backgroundColor: Colors.white,
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'AI Chat',
+              style: TextStyle(
+                color: Colors.black,
+                fontSize: 22,
+                fontWeight: FontWeight.w400,
+              ),
             ),
-          ),
+            const SizedBox(width: 15),
+            Image.asset(
+              'assets/aiChat.png', // Make sure this path matches your actual asset
+              width: 26,
+              height: 26,
+            ),
+          ],
         ),
-        title: const Text('AI Chat', style: TextStyle(color: Colors.white)),
-        elevation: 5,
       ),
       body: Column(
         children: [
@@ -211,7 +178,7 @@ class _ChatPageState extends State<ChatPage> {
                         decoration: BoxDecoration(
                           color: isUser
                               ? const Color(0xFF008080)
-                              : const Color(0xFFD9D9D9),
+                              : Colors.teal[50]?.withOpacity(0.6),
                           borderRadius: BorderRadius.only(
                             topLeft: const Radius.circular(16),
                             topRight: const Radius.circular(16),

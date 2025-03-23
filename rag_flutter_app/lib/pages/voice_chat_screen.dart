@@ -21,8 +21,9 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> with SingleTickerProv
   bool _isListening = false;
   String _transcription = "";
   String _response = "";
-  String _displayText = "Tap the mic to start speaking...";
+  String _displayText = "Tap the mic to speak...";
   final List<Map<String, String>> _conversation = [];
+  String _currentChunk = ""; // Tracks the currently displayed chunk of text
 
   @override
   void initState() {
@@ -33,12 +34,15 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> with SingleTickerProv
 
     _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 1),
-      lowerBound: 1.0,
-      upperBound: 1.2,
-    )..repeat(reverse: true);
+      duration: const Duration(seconds: 2),
+    );
 
     _initializeSpeech();
+
+    // Ensure the initial display text is set
+    setState(() {
+      _displayText = "Tap the mic to start speaking...";
+    });
   }
 
   @override
@@ -62,14 +66,18 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> with SingleTickerProv
     if (!_isListening) {
       setState(() {
         _isListening = true;
-        _displayText = "Listening...";
+        _displayText = "Listening..."; // Show "Listening..." initially
       });
+      _animationController.repeat();
 
       await _speechToText.listen(onResult: (result) {
-        setState(() {
-          _transcription = result.recognizedWords;
-          _displayText = _transcription;
-        });
+        // Only update transcription if still listening
+        if (_isListening) {
+          setState(() {
+            _transcription = result.recognizedWords;
+            _displayText = _transcription; // Update display text with the user's speech
+          });
+        }
       });
     }
   }
@@ -83,30 +91,44 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> with SingleTickerProv
 
       if (_transcription.isNotEmpty) {
         _addToConversation("user", _transcription);
-        _getResponseFromApi(_transcription);
+        setState(() {
+          _displayText = "Processing..."; // Show "Processing..." while waiting for the response
+        });
+        await _getResponseFromApi(_transcription); // Wait for the response
       } else {
         setState(() {
           _displayText = "No speech detected.";
         });
       }
+      _animationController.stop();
+      _animationController.reset();
     }
   }
 
   Future<void> _getResponseFromApi(String query) async {
+    // Step 1: Show "Processing..." immediately
     setState(() {
-      _displayText = "Processing...";
+      _displayText = "Processing..."; // Show "Processing..." while waiting for the response
     });
 
+    // Step 2: Allow the UI to update before making the API call
+    await Future.delayed(const Duration(milliseconds: 100));
+
     try {
+      // Step 3: Fetch the response from the API
       String apiResponse = await _apiService.getResponseFromApi(query);
+
+      // Step 4: Update the response and display text
       setState(() {
         _response = apiResponse;
-        _displayText = _response;
+        _displayText = _response; // Update display text with the response
       });
 
+      // Add the response to the conversation and speak it
       _addToConversation("bot", apiResponse);
       await _speak(apiResponse);
     } catch (e) {
+      // Step 5: Handle errors and update the display text
       setState(() {
         _displayText = "Error: $e";
       });
@@ -114,7 +136,19 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> with SingleTickerProv
   }
 
   Future<void> _speak(String text) async {
-    await _flutterTts.speak(text);
+    String sanitizedText = _removeEmojis(text); // Remove emojis from the text
+    List<String> chunks = _splitTextIntoChunks(sanitizedText, 200); // Split text into chunks of 200 characters
+    for (String chunk in chunks) {
+      setState(() {
+        _currentChunk = chunk; // Update the displayed chunk dynamically
+      });
+      await _flutterTts.speak(chunk);
+      await _flutterTts.awaitSpeakCompletion(true); // Wait for the current chunk to finish
+    }
+    setState(() {
+      _currentChunk = ""; // Clear the current chunk after speaking
+      _displayText = "Tap the mic to speak"; // Reset the display text
+    });
   }
 
   void _addToConversation(String sender, String text) {
@@ -125,6 +159,48 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> with SingleTickerProv
     widget.onNewMessage?.call(message);
   }
 
+  List<String> _splitTextIntoChunks(String text, int chunkSize) {
+    List<String> chunks = [];
+    int index = 0;
+
+    while (index < text.length) {
+      // Find the nearest space before the chunk limit
+      int end = (index + chunkSize).clamp(0, text.length);
+      int spaceIndex = text.lastIndexOf(' ', end);
+
+      // Split at the space if found within the chunk window
+      if (spaceIndex != -1 && spaceIndex > index) {
+        chunks.add(text.substring(index, spaceIndex));
+        index = spaceIndex + 1; // Skip the space
+      } 
+      // Fallback: Split at chunk size (avoids infinite loops)
+      else {
+        chunks.add(text.substring(index, end));
+        index = end;
+      }
+    }
+
+    return chunks;
+  }
+
+  String _removeEmojis(String text) {
+    final emojiRegex = RegExp(
+      r'[\u{1F600}-\u{1F64F}]|' // Emoticons
+      r'[\u{1F300}-\u{1F5FF}]|' // Miscellaneous Symbols and Pictographs
+      r'[\u{1F680}-\u{1F6FF}]|' // Transport and Map Symbols
+      r'[\u{1F700}-\u{1F77F}]|' // Alchemical Symbols
+      r'[\u{1F780}-\u{1F7FF}]|' // Geometric Shapes Extended
+      r'[\u{1F800}-\u{1F8FF}]|' // Supplemental Arrows-C
+      r'[\u{1F900}-\u{1F9FF}]|' // Supplemental Symbols and Pictographs
+      r'[\u{1FA00}-\u{1FA6F}]|' // Chess Symbols
+      r'[\u{1FA70}-\u{1FAFF}]|' // Symbols and Pictographs Extended-A
+      r'[\u{2600}-\u{26FF}]|'   // Miscellaneous Symbols
+      r'[\u{2700}-\u{27BF}]',   // Dingbats
+      unicode: true,
+    );
+    return text.replaceAll(emojiRegex, '');
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -132,55 +208,55 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> with SingleTickerProv
       appBar: AppBar(
         title: const Text("Voice Chat"),
         backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context, _conversation),
-        ),
       ),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            // Robot Image
             AnimatedContainer(
               duration: const Duration(milliseconds: 500),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                boxShadow: _isListening
-                    ? [
-                        BoxShadow(
-                          color: Colors.redAccent.withOpacity(0.5),
-                          blurRadius: 30,
-                          spreadRadius: 10,
-                          offset: const Offset(0, 10),
-                        ),
-                      ]
-                    : [],
+                boxShadow: [
+                  BoxShadow(
+                    color: _isListening ? Colors.redAccent.withOpacity(0.5)
+                        : const Color(0xFF66B2B2).withOpacity(0.5),
+                    blurRadius: 30,
+                    spreadRadius: 10,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
               ),
               child: ClipOval(
-              child: Image.asset(
-                'assets/robot.jpg',
-                width: 250,
-                height: 250,
-                fit: BoxFit.cover,
-              ),
+                child: Image.asset(
+                  'assets/robot.jpg',
+                  width: 250,
+                  height: 250,
+                  fit: BoxFit.cover,
+                ),
               ),
             ),
             const SizedBox(height: 40),
+
+            // Display Text (App State or Current Chunk)
             Container(
               width: MediaQuery.of(context).size.width * 0.85,
+              height: 200, // Fixed height for the text container
               padding: const EdgeInsets.all(20.0),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.8),
-                borderRadius: BorderRadius.circular(15),
-              ),
-              child: Text(
-                _displayText,
-                style: const TextStyle(fontSize: 17),
-                textAlign: TextAlign.center,
+              child: SingleChildScrollView(
+                child: Text(
+                  _currentChunk.isNotEmpty
+                      ? _currentChunk // Show the current chunk being read
+                      : _displayText, // Fallback to _displayText if no chunk is being read
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                  textAlign: TextAlign.center,
+                ),
               ),
             ),
             const SizedBox(height: 30),
+
+            // Mic Button
             GestureDetector(
               onTap: () {
                 if (_isListening) {
@@ -189,36 +265,45 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> with SingleTickerProv
                   _startListening();
                 }
               },
-              child: AnimatedBuilder(
-                animation: _animationController,
-                builder: (context, child) {
-                  return Transform.scale(
-                    scale: _isListening ? _animationController.value : 1.0,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        boxShadow: _isListening
-                            ? [
-                                BoxShadow(
-                                  color: Colors.redAccent.withOpacity(0.8),
-                                  spreadRadius: 15,
-                                  blurRadius: 30,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  if (_isListening)
+                    ...List.generate(3, (index) {
+                      return AnimatedBuilder(
+                        animation: _animationController,
+                        builder: (context, child) {
+                          final progress = (_animationController.value + index * 0.33) % 1.0;
+                          final scale = 1.0 + progress;
+                          final opacity = 1.0 - progress;
+                          
+                          return Transform.scale(
+                            scale: scale,
+                            child: Opacity(
+                              opacity: opacity,
+                              child: Container(
+                                width: 100,
+                                height: 100,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Colors.red.withOpacity(0.2),
                                 ),
-                              ]
-                            : [],
-                      ),
-                      child: CircleAvatar(
-                        radius: 50,
-                        backgroundColor: _isListening ? Colors.red : const Color(0xFF66B2B2),
-                        child: const Icon(
-                          Icons.mic,
-                          color: Colors.white,
-                          size: 40,
-                        ),
-                      ),
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    }),
+                  CircleAvatar(
+                    radius: 50,
+                    backgroundColor: _isListening ? Colors.red : const Color(0xFF66B2B2),
+                    child: const Icon(
+                      Icons.mic,
+                      color: Colors.white,
+                      size: 40,
                     ),
-                  );
-                },
+                  ),
+                ],
               ),
             ),
           ],
