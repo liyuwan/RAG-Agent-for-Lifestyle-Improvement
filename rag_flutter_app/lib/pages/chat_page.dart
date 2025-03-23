@@ -136,25 +136,17 @@ class _ChatPageState extends State<ChatPage> {
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.favorite, color: Colors.red, size: 20),
-            const SizedBox(width: 4),
-            Text(_heartRate,
-                style: const TextStyle(fontSize: 12, color: Colors.black)),
-            const SizedBox(width: 50),
-            Icon(Icons.directions_walk, color: Colors.blue, size: 20),
-            const SizedBox(width: 4),
-            Text(_steps,
-                style: const TextStyle(fontSize: 12, color: Colors.black)),
-            const SizedBox(width: 50),
-            Icon(Icons.scale, color: Colors.green, size: 20),
-            const SizedBox(width: 4),
-            Text('$_weight kg',
-                style: const TextStyle(fontSize: 12, color: Colors.black)),
-          ],
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Colors.teal.shade700, Colors.teal.shade400],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
         ),
+        title: const Text('AI Chat', style: TextStyle(color: Colors.white)),
+        elevation: 5,
       ),
       body: Column(
         children: [
@@ -282,46 +274,43 @@ class _ChatPageState extends State<ChatPage> {
                     height: 30,
                   ),
                   onPressed: () async {
-                    await Navigator.push(
+                    final result = await Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => VoiceChatScreen(
-                          onNewMessage: (message) async {
-                            setState(() {
-                              _pendingMessages.add({
-                                'sender': 'user',
-                                'text': message['text']!,
-                                'isPending': false,
-                              });
-                              _pendingMessages.add({
-                                'sender': 'bot',
-                                'text': '',
-                                'isPending': true,
-                              });
-                            });
-                            try {
-                              await apiService
-                                  .getResponseFromApi(message['text']!);
-                              setState(() {
-                                _pendingMessages.removeWhere(
-                                    (msg) => msg['isPending'] == true);
-                              });
-                            } catch (e) {
-                              setState(() {
-                                _pendingMessages.removeWhere(
-                                    (msg) => msg['isPending'] == true);
-                                _pendingMessages.add({
-                                  'sender': 'bot',
-                                  'text': 'Error: $e',
-                                  'isPending': false,
-                                });
-                              });
-                              debugPrint('Error sending voice message: $e');
-                            }
-                          },
-                        ),
+                        builder: (context) => VoiceChatScreen(),
                       ),
                     );
+
+                    if (result != null) {
+                      setState(() {
+                        for (var message in result) {
+                          bool alreadyExistsInPending = _pendingMessages.any(
+                              (msg) =>
+                                  msg['text'] == message['text'] &&
+                                  msg['sender'] == message['sender']);
+
+                          bool alreadyExistsInChatHistory = false;
+
+                          // Only add message if not already in pending or chat history
+                          if (!alreadyExistsInPending) {
+                            _chatHistoryCollection
+                                .where('user_input', isEqualTo: message['text'])
+                                .get()
+                                .then((querySnapshot) {
+                              if (querySnapshot.docs.isNotEmpty) {
+                                alreadyExistsInChatHistory = true;
+                              }
+
+                              // Only add if it's not in Firestore
+                              if (!alreadyExistsInChatHistory) {
+                                _pendingMessages.add(message);
+                              }
+
+                            });
+                          }
+                        }
+                      });
+                    }
                   },
                 ),
                 const SizedBox(width: 8),
