@@ -95,6 +95,9 @@ def generate_and_save_workout_plan(userId, query, SYSTEM_PROMPT, biometric_info,
         {"exercise": "name", "duration": minutes, "intensity": "low/medium/high"}
         ]'''
         "\nINCLUDE ONLY THE JSON WITH NO ADDITIONAL TEXT!\n"
+        "IMPORTANT: Tailor the workout plan to the user's specified workout level. For example, if the user's workout level is 'very mild', ensure that all exercises are low intensity, gentle, and include sufficient rest periods."
+        "Also, design the workout as a single session that fits within a reasonable daily timeframe (e.g., 30 to 60 minutes total), and do not include unrealistic rest durations (e.g., no 'Rest' exercise with durations exceeding a few minutes). "
+        "Ensure that the workout session does not contain multiple rounds in the same day unless explicitly specified."
     )
     
     weekly_workout_plans = []

@@ -23,7 +23,7 @@ class _ProgressPageState extends State<ProgressPage> {
   int _consistencyStreak = 0;
   int _highestStreak = 0;
   List<FlSpot> _caloriesConsumedSpots = [];
-  List<double> _exerciseCompletionPercentages = [];
+  List<double> _exerciseCompletionPercentages = List.filled(7, 0.0);
 
   //From HealthKit
   String _caloriesBurnt = '';
@@ -674,11 +674,14 @@ class _ProgressPageState extends State<ProgressPage> {
               child: BarChart(
                 BarChartData(
                   barGroups: List.generate(7, (index) {
+                    double percentage = index < _exerciseCompletionPercentages.length
+                        ? _exerciseCompletionPercentages[index]
+                        : 0.0; // Fallback to 0.0 if index is out of range
                     return BarChartGroupData(
                       x: index,
                       barRods: [
                         BarChartRodData(
-                          toY: _exerciseCompletionPercentages[index],
+                          toY: percentage,
                           gradient: LinearGradient(
                             colors: [Colors.green, Colors.lightGreen],
                             begin: Alignment.bottomCenter,
