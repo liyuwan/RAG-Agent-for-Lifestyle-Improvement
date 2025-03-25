@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '/services/globals.dart'; // Import the shared isDarkMode variable
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -27,7 +28,6 @@ class _ProfilePageState extends State<ProfilePage> {
     _fetchUserData();
   }
 
-  // Fetch user data from Firestore
   Future<void> _fetchUserData() async {
     User? user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
@@ -42,7 +42,7 @@ class _ProfilePageState extends State<ProfilePage> {
           _weightController.text = userDoc['weight']?.toString() ?? '';
           _heightController.text = userDoc['height']?.toString() ?? '';
           _profileImageUrl = userDoc['profileImage'];
-          _selectedGender = userDoc['gender']; // Fetch gender from Firestore
+          _selectedGender = userDoc['gender'];
           _isLoading = false;
         });
       }
@@ -52,7 +52,6 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  // Update Firestore with new data
   Future<void> _updateProfile() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -61,18 +60,16 @@ class _ProfilePageState extends State<ProfilePage> {
     if (user == null) return;
 
     try {
-      // Update Firestore document
       await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
         'name': _nameController.text.trim(),
         'age': int.parse(_ageController.text.trim()),
         'weight': double.parse(_weightController.text.trim()),
         'height': double.parse(_heightController.text.trim()),
-        'gender': _selectedGender, // Save gender to Firestore
-        'profileImage': _profileImageUrl, // Save the selected profile image path
+        'gender': _selectedGender,
+        'profileImage': _profileImageUrl,
         'last_updated': FieldValue.serverTimestamp(),
       });
 
-      // Show success message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Profile Updated Successfully!')),
       );
@@ -89,7 +86,6 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  // Show a dialog for selecting profile images
   Future<void> _chooseProfileImage() async {
     showDialog(
       context: context,
@@ -105,9 +101,9 @@ class _ProfilePageState extends State<ProfilePage> {
                 return GestureDetector(
                   onTap: () {
                     setState(() {
-                      _profileImageUrl = imagePath; // Set the selected image path
+                      _profileImageUrl = imagePath;
                     });
-                    Navigator.of(context).pop(); // Close the dialog
+                    Navigator.of(context).pop();
                   },
                   child: CircleAvatar(
                     radius: 40,
@@ -120,7 +116,7 @@ class _ProfilePageState extends State<ProfilePage> {
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop(); // Close the dialog
+                Navigator.of(context).pop();
               },
               child: Text('Cancel', style: TextStyle(color: Colors.teal)),
             ),
@@ -130,124 +126,173 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('Profile')),
-      body: _isLoading
-          ? Center(child: CircularProgressIndicator()) // Show loading spinner
-          : Padding(
-              padding: EdgeInsets.all(16.0),
-              child: Form(
-                key: _formKey,
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      // Profile Image Section
-                      Center(
-                        child: Stack(
-                          children: [
-                            CircleAvatar(
-                              radius: 80,
-                              backgroundImage: _profileImageUrl != null
-                                  ? AssetImage(_profileImageUrl!)
-                                  : AssetImage("assets/default_profile.png"),
-                            ),
-                            Positioned(
-                              bottom: 0,
-                              right: 0,
-                              child: GestureDetector(
-                                onTap: _chooseProfileImage, // Open the dialog to choose an image
-                                child: CircleAvatar(
-                                  radius: 18,
-                                  backgroundColor: Colors.teal,
-                                  child: Icon(Icons.edit, color: Colors.white),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      SizedBox(height: 60),
-
-                      // Name Field
-                      _buildTextField(_nameController, 'Name', Icons.person),
-                      SizedBox(height: 20),
-
-                      // Gender Dropdown
-                      DropdownButtonFormField<String>(
-                        value: _selectedGender,
-                        decoration: InputDecoration(
-                          labelText: 'Gender',
-                          labelStyle: TextStyle(fontSize: 14),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(24)),
-                          prefixIcon: Icon(Icons.person_outline),
-                        ),
-                        items: ['Male', 'Female', 'Other']
-                            .map((gender) => DropdownMenuItem(
-                                  value: gender,
-                                  child: Text(gender),
-                                ))
-                            .toList(),
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedGender = value;
-                          });
-                        },
-                        validator: (value) => value == null ? 'Please select your gender' : null,
-                      ),
-                      SizedBox(height: 20),
-
-                      // Age Field
-                      _buildTextField(_ageController, 'Age', Icons.calendar_today, isNumber: true),
-                      SizedBox(height: 20),
-
-                      // Weight & Height Fields
-                      Row(
-                        children: [
-                          Expanded(child: _buildTextField(_weightController, 'Weight (kg)', Icons.monitor_weight, isNumber: true)),
-                          SizedBox(width: 10),
-                          Expanded(child: _buildTextField(_heightController, 'Height (cm)', Icons.height, isNumber: true)),
-                        ],
-                      ),
-                      
-                      SizedBox(height: 100),
-
-                      // Save Button
-                      _isSubmitting
-                          ? CircularProgressIndicator()
-                          : ElevatedButton(
-                              onPressed: _updateProfile,
-                              style: ElevatedButton.styleFrom(
-                                foregroundColor: Colors.white, backgroundColor: Color(0xFF008080),
-                                fixedSize: Size(314, 48),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(24),
-                                ),
-                              ),
-                              child: Text('Save', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
-                            ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-    );
-  }
-
-  // Helper method for text fields
-  Widget _buildTextField(TextEditingController controller, String label, IconData icon, {bool isNumber = false}) {
+  Widget _buildTextField(TextEditingController controller, String label, IconData icon, bool darkMode, {bool isNumber = false}) {
     return TextFormField(
       controller: controller,
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: TextStyle(fontSize: 14),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(24)),
-        prefixIcon: Icon(icon),
+        labelStyle: TextStyle(color: darkMode ? Colors.white70 : Colors.black),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(24),
+          borderSide: BorderSide(color: darkMode ? Colors.white24 : Colors.grey),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(24),
+          borderSide: BorderSide(color: darkMode ? Colors.white24 : Colors.grey),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(24),
+          borderSide: BorderSide(color: darkMode ? Colors.tealAccent : Colors.teal),
+        ),
+        prefixIcon: Icon(icon, color: darkMode ? Colors.white70 : Colors.black),
       ),
       keyboardType: isNumber ? TextInputType.number : TextInputType.text,
+      style: TextStyle(color: darkMode ? Colors.white : Colors.black),
       validator: (value) => value!.isEmpty ? 'Please enter your $label' : null,
+    );
+  }
+
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<bool>(
+      valueListenable: isDarkMode,
+      builder: (context, darkMode, child) {
+        return Scaffold(
+          backgroundColor: darkMode ? Colors.grey[900] : Colors.white,
+          appBar: AppBar(
+            title: Text('Profile'),
+            backgroundColor: darkMode ? Colors.grey[900] : Colors.white,
+            iconTheme: IconThemeData(color: darkMode ? Colors.grey : Colors.black),
+            titleTextStyle: TextStyle(
+              color: darkMode ? Colors.white : Colors.black,
+              fontSize: 20,
+              fontWeight: FontWeight.w400,
+            ),
+          ),
+          body: _isLoading
+              ? Center(child: CircularProgressIndicator())
+              : Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: Form(
+                    key: _formKey,
+                    child: SingleChildScrollView(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          // Profile Image Section
+                          Center(
+                            child: Stack(
+                              children: [
+                                CircleAvatar(
+                                  radius: 80,
+                                  backgroundImage: _profileImageUrl != null
+                                      ? AssetImage(_profileImageUrl!)
+                                      : AssetImage("assets/default_profile.png"),
+                                ),
+                                Positioned(
+                                  bottom: 0,
+                                  right: 0,
+                                  child: GestureDetector(
+                                    onTap: _chooseProfileImage,
+                                    child: CircleAvatar(
+                                      radius: 18,
+                                      backgroundColor: darkMode ? Colors.grey[700] : Colors.teal,
+                                      child: Icon(Icons.edit, color: Colors.white),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          SizedBox(height: 60),
+
+                          // Name Field
+                          _buildTextField(_nameController, 'Name', Icons.person, darkMode),
+                          SizedBox(height: 20),
+
+                          // Gender Dropdown
+                          DropdownButtonFormField<String>(
+                            value: _selectedGender,
+                            decoration: InputDecoration(
+                              labelText: 'Gender',
+                              labelStyle: TextStyle(
+                                fontSize: 14,
+                                color: darkMode ? Colors.white70 : Colors.black,
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(24),
+                                borderSide: BorderSide(
+                                  color: darkMode ? Colors.white24 : Colors.grey,
+                                ),
+                              ),
+                              prefixIcon: Icon(Icons.person_outline, color: darkMode ? Colors.white70 : Colors.black),
+                            ),
+                            dropdownColor: darkMode ? Colors.grey[800] : Colors.grey[50],
+                            items: ['Male', 'Female', 'Other']
+                                .map((gender) => DropdownMenuItem(
+                                      value: gender,
+                                      child: Text(
+                                        gender,
+                                        style: TextStyle(color: darkMode ? Colors.white : Colors.black),
+                                      ),
+                                    ))
+                                .toList(),
+                            onChanged: (value) {
+                              setState(() {
+                                _selectedGender = value;
+                              });
+                            },
+                            validator: (value) => value == null ? 'Please select your gender' : null,
+                          ),
+                          SizedBox(height: 20),
+
+                          // Age Field
+                          _buildTextField(_ageController, 'Age', Icons.calendar_today, darkMode, isNumber: true),
+                          SizedBox(height: 20),
+
+                          // Weight & Height Fields
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildTextField(_weightController, 'Weight (kg)', Icons.monitor_weight, darkMode, isNumber: true),
+                              ),
+                              SizedBox(width: 10),
+                              Expanded(
+                                child: _buildTextField(_heightController, 'Height (cm)', Icons.height, darkMode, isNumber: true),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 100),
+
+                          // Save Button
+                          _isSubmitting
+                              ? CircularProgressIndicator()
+                              : ElevatedButton(
+                                  onPressed: _updateProfile,
+                                  style: ElevatedButton.styleFrom(
+                                    foregroundColor: Colors.white,
+                                    backgroundColor: darkMode ? Colors.grey[700] : Colors.teal,
+                                    fixedSize: Size(314, 48),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(24),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    'Save',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+        );
+      },
     );
   }
 }

@@ -7,6 +7,7 @@ import 'package:rag_flutter_app/widgets/settings_button.dart';
 import 'package:health/health.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'dart:io';
+import '/services/globals.dart';
 
 class ProgressPage extends StatefulWidget {
   const ProgressPage({super.key});
@@ -266,7 +267,7 @@ class _ProgressPageState extends State<ProgressPage> {
     return Container(
       padding: const EdgeInsets.all(20.0),
       decoration: BoxDecoration(
-        color: Colors.teal[50],
+        color: isDarkMode.value ? Colors.grey[800] : Colors.teal[50],
         borderRadius: BorderRadius.circular(13.0),
       ),
       child: Column(
@@ -283,13 +284,13 @@ class _ProgressPageState extends State<ProgressPage> {
                         style: TextStyle(
                             fontSize: 13.0,
                             fontWeight: FontWeight.bold,
-                            color: Colors.black)),
+                            color: isDarkMode.value ? Colors.white : Colors.black)),
                     TextSpan(
                         text: '$_weight kg',
                         style: TextStyle(
                             fontSize: 13.0,
                             fontWeight: FontWeight.normal,
-                            color: Colors.black)),
+                            color: isDarkMode.value ? Colors.white70 : Colors.black)),
                   ],
                 ),
               ),
@@ -301,13 +302,13 @@ class _ProgressPageState extends State<ProgressPage> {
                         style: TextStyle(
                             fontSize: 13.0,
                             fontWeight: FontWeight.bold,
-                            color: Colors.black)),
+                            color: isDarkMode.value ? Colors.white : Colors.black)),
                     TextSpan(
                         text: '$_height cm',
                         style: TextStyle(
                             fontSize: 13.0,
                             fontWeight: FontWeight.normal,
-                            color: Colors.black)),
+                            color: isDarkMode.value ? Colors.white70 : Colors.black)),
                   ],
                 ),
               ),
@@ -326,13 +327,13 @@ class _ProgressPageState extends State<ProgressPage> {
                         style: TextStyle(
                             fontSize: 13.0,
                             fontWeight: FontWeight.bold,
-                            color: Colors.black)),
+                            color: isDarkMode.value ? Colors.white : Colors.black)),
                     TextSpan(
                         text: '$_caloriesBurnt kcal',
                         style: TextStyle(
                             fontSize: 13.0,
                             fontWeight: FontWeight.normal,
-                            color: Colors.black)),
+                            color: isDarkMode.value ? Colors.white70 : Colors.black)),
                   ],
                 ),
               ),
@@ -351,13 +352,13 @@ class _ProgressPageState extends State<ProgressPage> {
                         style: TextStyle(
                             fontSize: 13.0,
                             fontWeight: FontWeight.bold,
-                            color: Colors.black)),
+                            color: isDarkMode.value ? Colors.white : Colors.black)),
                     TextSpan(
                         text: '$_steps steps',
                         style: TextStyle(
                             fontSize: 13.0,
                             fontWeight: FontWeight.normal,
-                            color: Colors.black)),
+                            color: isDarkMode.value ? Colors.white70 : Colors.black)),
                   ],
                 ),
               ),
@@ -376,13 +377,13 @@ class _ProgressPageState extends State<ProgressPage> {
                         style: TextStyle(
                             fontSize: 13.0,
                             fontWeight: FontWeight.bold,
-                            color: Colors.black)),
+                            color: isDarkMode.value ? Colors.white : Colors.black)),
                     TextSpan(
                         text: '$_consistencyStreak days',
                         style: TextStyle(
                             fontSize: 13.0,
                             fontWeight: FontWeight.normal,
-                            color: Colors.black)),
+                            color: isDarkMode.value ? Colors.white70 : Colors.black)),
                   ],
                 ),
               ),
@@ -468,7 +469,7 @@ class _ProgressPageState extends State<ProgressPage> {
     return Container(
       padding: const EdgeInsets.all(20.0),
       decoration: BoxDecoration(
-        color: Colors.yellow[50],
+        color: isDarkMode.value ? Colors.grey[800] : Colors.yellow[50],
         borderRadius: BorderRadius.circular(13.0),
       ),
       child: Text(
@@ -477,7 +478,7 @@ class _ProgressPageState extends State<ProgressPage> {
             fontSize: 13.0,
             fontWeight: FontWeight.w700,
             fontStyle: FontStyle.italic,
-            color: Colors.black),
+            color: isDarkMode.value ? Colors.white : Colors.black),
         textAlign: TextAlign.center,
       ),
     );
@@ -511,7 +512,7 @@ class _ProgressPageState extends State<ProgressPage> {
         SizedBox(width: 5),
         Text(
           text,
-          style: TextStyle(fontSize: 12, color: Colors.blueGrey),
+          style: TextStyle(fontSize: 12, color: isDarkMode.value ? Colors.grey : Colors.blueGrey),
         ),
       ],
     );
@@ -524,7 +525,7 @@ class _ProgressPageState extends State<ProgressPage> {
           height: 200,
           child: Card(
             elevation: 0,
-            color: Colors.white,
+            color: isDarkMode.value ? Colors.grey[900] : Colors.white,
             child: Padding(
               padding: const EdgeInsets.only(left: 5.0, right: 15.0),
               child: LineChart(
@@ -628,7 +629,7 @@ class _ProgressPageState extends State<ProgressPage> {
                 padding: const EdgeInsets.only(top: 8.0),
                 child: Text(
                   weekday,
-                  style: TextStyle(fontSize: 10, color: Colors.red),
+                  style: TextStyle(fontSize: 10, color: isDarkMode.value ? Colors.grey : Colors.red),
                 ),
               );
             }
@@ -668,7 +669,7 @@ class _ProgressPageState extends State<ProgressPage> {
           height: 200,
           child: Card(
             elevation: 0,
-            color: Colors.white,
+            color: isDarkMode.value ? Colors.grey[900] : Colors.white,
             child: Padding(
               padding: const EdgeInsets.only(left: 5.0, right: 15.0),
               child: BarChart(
@@ -717,7 +718,7 @@ class _ProgressPageState extends State<ProgressPage> {
                             DateTime day = DateTime.now().subtract(Duration(days: 6 - index));
                             return Text(
                               DateFormat.E().format(day),
-                              style: TextStyle(fontSize: 10, color: Colors.black),
+                              style: TextStyle(fontSize: 10, color: isDarkMode.value ? Colors.grey : Colors.black),
                             );
                           }
                           return Text('');
@@ -758,96 +759,102 @@ class _ProgressPageState extends State<ProgressPage> {
   Widget build(BuildContext context) {
     String todayDate = DateFormat('MMMM dd, yyyy').format(DateTime.now());
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        centerTitle: false,
-        automaticallyImplyLeading: false,
-        title: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: Text(
-            todayDate,
-            style: TextStyle(fontSize: 16.0, fontWeight: FontWeight.w500),
+    return ValueListenableBuilder<bool>(
+      valueListenable: isDarkMode,
+      builder: (context, darkMode, child) {
+        return Scaffold(
+          backgroundColor: darkMode ? Colors.grey[900] : Colors.white,
+          appBar: AppBar(
+            backgroundColor: darkMode ? Colors.grey[900] : Colors.white,
+            centerTitle: false,
+            automaticallyImplyLeading: false,
+            title: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Text(
+                todayDate,
+                style: TextStyle(
+                    fontSize: 16.0,
+                    fontWeight: FontWeight.w500,
+                    color: darkMode ? Colors.white : Colors.black),
+              ),
+            ),
+            actions: [
+              Padding(
+                padding: const EdgeInsets.only(right: 25.0, bottom: 5.0),
+                child: SettingsButton(),
+              ),
+            ],
           ),
-        ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 25.0, bottom: 5.0),
-            child: SettingsButton(),
-          ),
-        ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: _getBiometricData,
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 25.0, vertical: 5.0),
-            child: Column(
-              children: [
-                _buildUserCurrentDataSection(),
-                SizedBox(height: 10.0),
-                _buildAchievementSection(),
-                SizedBox(height: 10.0),
-                _buildMotivationalQuoteSection(),
-                SizedBox(height: 13.0),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.start,
+          body: RefreshIndicator(
+            onRefresh: _getBiometricData,
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 25.0, vertical: 5.0),
+                child: Column(
                   children: [
-                    SizedBox(width: 10.0),
-                    Text(
-                      "Calories Overview",
-                      style: TextStyle(
-                          fontSize: 16.0,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black),
+                    _buildUserCurrentDataSection(),
+                    SizedBox(height: 10.0),
+                    _buildAchievementSection(),
+                    SizedBox(height: 10.0),
+                    _buildMotivationalQuoteSection(),
+                    SizedBox(height: 13.0),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      children: [
+                        SizedBox(width: 10.0),
+                        Text(
+                          "Calories Overview",
+                          style: TextStyle(
+                              fontSize: 16.0,
+                              fontWeight: FontWeight.w600,
+                              color: darkMode ? Colors.white : Colors.black),
+                        ),
+                        Spacer(),
+                        IconButton(
+                          onPressed: _getBiometricData,
+                          icon: Icon(
+                            Icons.refresh_rounded,
+                            color: darkMode ? Colors.white70 : Colors.blue[200],
+                          ),
+                          tooltip: 'Refresh Data',
+                        ),
+                      ],
                     ),
-                    Spacer(),
-                    IconButton(
-                      onPressed: _getBiometricData,
-                      icon: Icon(
-                        Icons.refresh_rounded,
-                        color: Colors.blue[200],
-                      ),
-                      color: Colors.lightBlue[300],
-                      tooltip: 'Refresh Data',
+                    SizedBox(height: 15.0),
+                    _buildCaloriesOverviewChart(),
+                    SizedBox(height: 25.0),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      children: [
+                        SizedBox(width: 10.0),
+                        Text(
+                          "Exercise Completion Overview",
+                          style: TextStyle(
+                              fontSize: 16.0,
+                              fontWeight: FontWeight.w600,
+                              color: darkMode ? Colors.white : Colors.black),
+                        ),
+                        Spacer(),
+                        IconButton(
+                          onPressed: _getBiometricData,
+                          icon: Icon(
+                            Icons.refresh_rounded,
+                            color: darkMode ? Colors.white70 : Colors.blue[200],
+                          ),
+                          tooltip: 'Refresh Data',
+                        ),
+                      ],
                     ),
+                    SizedBox(height: 15.0),
+                    _buildExerciseCompletionChart(), // Add the new chart here
+                    SizedBox(height: 100.0),
                   ],
                 ),
-                SizedBox(height: 15.0),
-                _buildCaloriesOverviewChart(),
-                SizedBox(height: 25.0),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  children: [
-                    SizedBox(width: 10.0),
-                    Text(
-                      "Exercise Completion Overview",
-                      style: TextStyle(
-                          fontSize: 16.0,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black),
-                    ),
-                    Spacer(),
-                    IconButton(
-                      onPressed: _getBiometricData,
-                      icon: Icon(
-                        Icons.refresh_rounded,
-                        color: Colors.blue[200],
-                      ),
-                      color: Colors.lightBlue[300],
-                      tooltip: 'Refresh Data',
-                    ),
-                  ],
-                ),
-                SizedBox(height: 15.0),
-                _buildExerciseCompletionChart(), // Add the new chart here
-                SizedBox(height: 100.0),
-              ],
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

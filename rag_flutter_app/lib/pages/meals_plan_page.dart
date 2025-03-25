@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:convert';
 import 'package:intl/intl.dart';
 import '../widgets/settings_button.dart';
+import '/services/globals.dart'; // Import the globals file for isDarkMode
 
 class MealsPlanPage extends StatefulWidget {
   const MealsPlanPage({super.key});
@@ -137,7 +138,11 @@ class _MealsPlanPageState extends State<MealsPlanPage> {
           SizedBox(width: 15),
           Text(
             "Welcome back,\n$username", // Display the username here
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black),
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: isDarkMode.value ? Colors.white : Colors.black,
+            ),
           ),
           const Spacer(),
           SettingsButton(),
@@ -194,7 +199,7 @@ class _MealsPlanPageState extends State<MealsPlanPage> {
                     width: 60,
                     margin: const EdgeInsets.symmetric(horizontal: 4),
                     decoration: BoxDecoration(
-                      color: isSelected ? Colors.white : Colors.transparent,
+                      color: isSelected ? (isDarkMode.value ? Colors.white30 : Colors.white) : Colors.transparent,
                       borderRadius: BorderRadius.circular(28), // Increased border radius
                     ),
                     alignment: Alignment.center,
@@ -205,7 +210,7 @@ class _MealsPlanPageState extends State<MealsPlanPage> {
                           DateFormat.MMM().format(date), // Short month name
                           style: TextStyle(
                             fontSize: 12,
-                            color: isSelected ? Colors.teal : (isToday ? Colors.deepOrange[300] : Colors.black),
+                            color: isSelected ? (isDarkMode.value ? Colors.tealAccent : Colors.teal) : (isToday ? Colors.deepOrange[300] : (isDarkMode.value ? Colors.grey : Colors.black)),
                           ),
                         ),
                         Text(
@@ -213,14 +218,14 @@ class _MealsPlanPageState extends State<MealsPlanPage> {
                           style: TextStyle(
                             fontSize: 17,
                             fontWeight: FontWeight.w600,
-                            color: isSelected ? Colors.teal : (isToday ? Colors.deepOrange[400] : Colors.black),
+                            color: isSelected ?  (isDarkMode.value ? Colors.tealAccent : Colors.teal) : (isToday ? Colors.deepOrange[400] : (isDarkMode.value ? Colors.grey : Colors.black)),
                           ),
                         ),
                         Text(
                           DateFormat.E().format(date), // Short day name
                           style: TextStyle(
                             fontSize: 12,
-                            color: isSelected ? Colors.teal : (isToday ? Colors.deepOrange[300] : Colors.black),
+                            color: isSelected ?  (isDarkMode.value ? Colors.tealAccent : Colors.teal) : (isToday ? Colors.deepOrange[300] : (isDarkMode.value ? Colors.grey : Colors.black)),
                           ),
                         ),
                         if (isSelected)
@@ -276,90 +281,117 @@ class _MealsPlanPageState extends State<MealsPlanPage> {
       builder: (BuildContext context, StateSetter setState) {
         bool isCompleted = _completedMeals[title] ?? false;
 
-        return Card(
-          margin: EdgeInsets.symmetric(vertical: 10, horizontal: 16),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          color: Colors.teal[50],
-          elevation: 0,
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Stack(
-              children: [
-                Column(
+        return ValueListenableBuilder<bool>(
+          valueListenable: isDarkMode,
+          builder: (context, darkMode, child) {
+            return Card(
+              margin: EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              color: darkMode ? Colors.grey[800] : Colors.teal[50], // Adjusted for dark mode
+              elevation: 0,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Stack(
                   children: [
-                    // Upper part: icon and text side by side.
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center, // Center the icon vertically
+                    Column(
                       children: [
-                        SizedBox(width: 10),
-                        Icon(icon, color: Colors.grey[700], size: 28),
-                        SizedBox(width: 25),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                title,
-                                style: TextStyle(fontWeight: FontWeight.w500, fontSize: 17),
-                              ),
-                              SizedBox(height: 8),
-                              Column(
+                        // Upper part: icon and text side by side.
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center, // Center the icon vertically
+                          children: [
+                            SizedBox(width: 10),
+                            Icon(icon, color: darkMode ? Colors.white70 : Colors.grey[700], size: 28),
+                            SizedBox(width: 25),
+                            Expanded(
+                              child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
-                                children: (data['food_items'] as List)
-                                    .map<Widget>(
-                                      (item) => Padding(
-                                        padding: EdgeInsets.only(bottom: 4),
-                                        child: Text(item, style: TextStyle(fontSize: 13)),
-                                      ),
-                                    )
-                                    .toList(),
+                                children: [
+                                  Text(
+                                    title,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w500,
+                                      fontSize: 17,
+                                      color: darkMode ? Colors.white : Colors.black,
+                                    ),
+                                  ),
+                                  SizedBox(height: 8),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: (data['food_items'] as List)
+                                        .map<Widget>(
+                                          (item) => Padding(
+                                            padding: EdgeInsets.only(bottom: 4),
+                                            child: Text(
+                                              item,
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                color: darkMode ? Colors.white70 : Colors.black,
+                                              ),
+                                            ),
+                                          ),
+                                        )
+                                        .toList(),
+                                  ),
+                                ],
                               ),
-                            ],
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 16),
+                        Divider(
+                          color: darkMode ? Colors.white24 : Colors.white70,
+                          thickness: 3,
+                        ),
+                        SizedBox(height: 8),
+                        // Lower part: calories information
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.local_fire_department_outlined,
+                                color: darkMode ? Colors.orange[300] : Colors.black87),
+                            SizedBox(width: 4),
+                            Text(
+                              "${data['calories']} kcal",
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: darkMode ? Colors.orange[300] : Colors.black,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    if (isToday)
+                      Positioned(
+                        top: -15,
+                        right: -10,
+                        child: Checkbox(
+                          shape: CircleBorder(),
+                          value: isCompleted,
+                          activeColor: darkMode ? Colors.white : Colors.teal,
+                          checkColor: darkMode ? Colors.teal : Colors.white,
+                          side: BorderSide(
+                            color: darkMode ? Colors.white24 : Colors.grey, // Border color for inactive state
+                            width: 2, // Thickness of the border
                           ),
+                          onChanged: (bool? value) {
+                            setState(() {
+                              _completedMeals[title] = value ?? false;
+                              if (value == true) {
+                                caloriesConsumed += data['calories'] as int;
+                              } else {
+                                caloriesConsumed -= data['calories'] as int;
+                              }
+                              _saveCaloriesConsumed(); // Save the data to Firestore
+                            });
+                          },
                         ),
-                      ],
-                    ),
-                    SizedBox(height: 16),
-                    Divider(color: Colors.white70, thickness: 3,),
-                    SizedBox(height: 8),
-                    // Lower part: calories information
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.local_fire_department_outlined, color: Colors.black87),
-                        SizedBox(width: 4),
-                        Text(
-                          "${data['calories']} kcal",
-                          style: TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                      ],
-                    ),
+                      ),
                   ],
                 ),
-                if (isToday)
-                  Positioned(
-                    top: -15,
-                    right: -10,
-                      child: Checkbox(
-                        shape: CircleBorder(),
-                        value: isCompleted,
-                        activeColor: Colors.teal,
-                        onChanged: (bool? value) {
-                          setState(() {
-                            _completedMeals[title] = value ?? false;
-                            if (value == true) {
-                              caloriesConsumed += data['calories'] as int;
-                            } else {
-                              caloriesConsumed -= data['calories'] as int;
-                            }
-                            _saveCaloriesConsumed(); // Save the data to Firestore
-                          });
-                        },
-                      ),
-                  ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         );
       },
     );
@@ -369,119 +401,154 @@ class _MealsPlanPageState extends State<MealsPlanPage> {
   Widget build(BuildContext context) {
     double screenHeight = MediaQuery.of(context).size.height;// Declare totalCalories here
 
-    return Scaffold(
-      body: Column(
-        children: [
-          SizedBox(
-            height: screenHeight * 0.25, // Ensuring full 25% height
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                // Background image (Positioned to align from top)
-                Positioned.fill(
-                  child: Opacity(
-                    opacity: 0.8,
-                    child: Image.asset(
-                      'assets/mealplan-banner.png', // Replace with your image path
-                      fit: BoxFit.none, // Ensures full width without cropping
-                      alignment:
-                          Alignment.topCenter, // Aligns the image from the top
-                    ),
-                  ),
-                ),
-
-                // Foreground content: Profile + Calendar, ensuring they fill the space
-                Column(
+    return ValueListenableBuilder<bool>(
+      valueListenable: isDarkMode,
+      builder: (context, darkMode, child) {
+        return Scaffold(
+          backgroundColor: darkMode ? Colors.grey[900] : Colors.white,
+          body: Column(
+            children: [
+              SizedBox(
+                height: screenHeight * 0.25, // Ensuring full 25% height
+                child: Stack(
+                  fit: StackFit.expand,
                   children: [
-                    const SizedBox(height: 55),
-                    buildProfileSection(),
-                    const SizedBox(height: 20),
-                    buildCalendar(),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          SizedBox(height: 10),
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 25),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.start,
-              children: [
-                Icon(Icons.local_fire_department_outlined,
-                    color: Colors.redAccent, size: 30),
-                const SizedBox(width: 8),
-                RichText(
-                  text: TextSpan(
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black, // Default text color
-                    ),
-                    children: [
-                      const TextSpan(text: "Total Calories : "), // Normal text
-                      TextSpan(
-                        text: "$_totalCalories kcal", // The variable part (e.g., "Moderate")
-                        style: TextStyle(
-                          color: Colors.orange[400], // Set only the workout level text to orange
-                          fontWeight: FontWeight.bold,
+                    // Background image with reduced opacity
+                    Positioned.fill(
+                      child: Opacity(
+                        opacity: 0.5, // Reduced opacity for better visibility in dark mode
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: Image.asset(
+                            'assets/mealplan-banner.png', // Replace with your image path
+                            fit: BoxFit.cover, // Ensures the image covers the entire area
+                            alignment: Alignment.topCenter, // Aligns the image from the top
+                          ),
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                    // Gradient overlay to create a fade effect at the bottom
+                    Positioned.fill(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.transparent, // Fully transparent at the top
+                              darkMode ? Colors.grey[900]! : Colors.transparent, // Fade to background color
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    // Foreground content: Profile + Calendar
+                    Column(
+                      children: [
+                        const SizedBox(height: 55),
+                        buildProfileSection(),
+                        const SizedBox(height: 20),
+                        buildCalendar(),
+                      ],
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: StreamBuilder<QuerySnapshot>(
-              stream: getMealPlansForDate(selectedDate),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return Center(child: CircularProgressIndicator());
-                }
-                if (snapshot.hasError ||
-                    !snapshot.hasData ||
-                    snapshot.data!.docs.isEmpty) {
-                  return Center(child: Text("No meal plans found"));
-                }
-                try {
-                  final mealPlan =
-                      snapshot.data!.docs.first.data() as Map<String, dynamic>;
-                  final rawContent = mealPlan['content'];
-                  final content = rawContent is String
-                      ? jsonDecode(rawContent)
-                      : rawContent;
-                  final int calculatedCalories = _calculateTotalCalories(content);
+              ),
+              SizedBox(height: 10),
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 25),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    Icon(Icons.local_fire_department_outlined,
+                        color: Colors.redAccent, size: 30),
+                    const SizedBox(width: 8),
+                    RichText(
+                      text: TextSpan(
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: darkMode ? Colors.white : Colors.black,
+                        ),
+                        children: [
+                          const TextSpan(text: "Total Calories : "),
+                          TextSpan(
+                            text: "$_totalCalories kcal",
+                            style: TextStyle(
+                              color: Colors.orange[400],
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: StreamBuilder<QuerySnapshot>(
+                  stream: getMealPlansForDate(selectedDate),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return Center(child: CircularProgressIndicator());
+                    }
+                    if (snapshot.hasError ||
+                        !snapshot.hasData ||
+                        snapshot.data!.docs.isEmpty) {
+                      return Center(
+                        child: Text(
+                          "No meal plans found",
+                          style: TextStyle(
+                            color: darkMode ? Colors.white : Colors.black,
+                          ),
+                        ),
+                      );
+                    }
+                    try {
+                      final mealPlan =
+                          snapshot.data!.docs.first.data() as Map<String, dynamic>;
+                      final rawContent = mealPlan['content'];
+                      final content = rawContent is String
+                          ? jsonDecode(rawContent)
+                          : rawContent;
+                      final int calculatedCalories = _calculateTotalCalories(content);
 
-                  if (_totalCalories != calculatedCalories) {
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      setState(() {
-                        _totalCalories = calculatedCalories;
-                      });
-                    });
-                  }
-                  return ListView(
-                    padding: EdgeInsets.all(10),
-                    children: [
-                      _buildMealCard("Breakfast", content['breakfast'],
-                          Icons.free_breakfast_outlined),
-                      _buildMealCard(
-                          "Lunch", content['lunch'], Icons.lunch_dining_outlined),
-                      _buildMealCard(
-                          "Dinner", content['dinner'], Icons.dinner_dining_outlined),
-                      const SizedBox(height: 100),
-                    ],
-                  );
-                } catch (e) {
-                  return Center(child: Text("Error parsing meal plan"));
-                }
-              },
-            ),
+                      if (_totalCalories != calculatedCalories) {
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          setState(() {
+                            _totalCalories = calculatedCalories;
+                          });
+                        });
+                      }
+                      return ListView(
+                        padding: EdgeInsets.all(10),
+                        children: [
+                          _buildMealCard("Breakfast", content['breakfast'],
+                              Icons.free_breakfast_outlined),
+                          _buildMealCard(
+                              "Lunch", content['lunch'], Icons.lunch_dining_outlined),
+                          _buildMealCard(
+                              "Dinner", content['dinner'], Icons.dinner_dining_outlined),
+                          const SizedBox(height: 100),
+                        ],
+                      );
+                    } catch (e) {
+                      return Center(
+                        child: Text(
+                          "Error parsing meal plan",
+                          style: TextStyle(
+                            color: darkMode ? Colors.white : Colors.black,
+                          ),
+                        ),
+                      );
+                    }
+                  },
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
-      backgroundColor: Colors.white,
+        );
+      },
     );
   }
 }

@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import '../widgets/settings_button.dart';
+import '/services/globals.dart'; // Import the globals file for isDarkMode
 import 'dart:convert';
 
 class WorkoutPlanPage extends StatefulWidget {
@@ -139,7 +140,11 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
           SizedBox(width: 15),
           Text(
             "Welcome back,\n$username", // Display the username here
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white),
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: isDarkMode.value ? Colors.white : Colors.black,
+            ),
           ),
           const Spacer(),
           SettingsButton(),
@@ -172,7 +177,7 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 30),
           child: SizedBox(
-            height: 90,
+            height: 90, // Increased height to accommodate the month text
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               itemCount: totalDays,
@@ -196,8 +201,8 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
                     width: 60,
                     margin: const EdgeInsets.symmetric(horizontal: 4),
                     decoration: BoxDecoration(
-                      color: isSelected ? Colors.white : Colors.transparent,
-                      borderRadius: BorderRadius.circular(28),
+                      color: isSelected ? (isDarkMode.value ? Colors.white30 : Colors.white) : Colors.transparent,
+                      borderRadius: BorderRadius.circular(28), // Increased border radius
                     ),
                     alignment: Alignment.center,
                     child: Column(
@@ -207,7 +212,7 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
                           DateFormat.MMM().format(date), // Short month name
                           style: TextStyle(
                             fontSize: 12,
-                            color: isSelected ? Colors.lightGreen : (isToday ? Colors.deepOrange[300] : Colors.black),
+                            color: isSelected ? (isDarkMode.value ? Colors.tealAccent : Colors.teal) : (isToday ? Colors.deepOrange[300] : (isDarkMode.value ? Colors.grey : Colors.black)),
                           ),
                         ),
                         Text(
@@ -215,14 +220,14 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
                           style: TextStyle(
                             fontSize: 17,
                             fontWeight: FontWeight.w600,
-                            color: isSelected ? Colors.lightGreen : (isToday ? Colors.deepOrange[400] : Colors.black),
+                            color: isSelected ?  (isDarkMode.value ? Colors.tealAccent : Colors.teal) : (isToday ? Colors.deepOrange[400] : (isDarkMode.value ? Colors.grey : Colors.black)),
                           ),
                         ),
-                        Text( 
+                        Text(
                           DateFormat.E().format(date), // Short day name
                           style: TextStyle(
                             fontSize: 12,
-                            color: isSelected ? Colors.lightGreen : (isToday ? Colors.deepOrange[300] : Colors.black),
+                            color: isSelected ?  (isDarkMode.value ? Colors.tealAccent : Colors.teal) : (isToday ? Colors.deepOrange[300] : (isDarkMode.value ? Colors.grey : Colors.black)),
                           ),
                         ),
                         if (isSelected)
@@ -232,7 +237,7 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
                             height: 6,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: Colors.grey[300],
+                              color: Colors.teal[200],
                             ),
                           ),
                       ],
@@ -246,6 +251,7 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
       ],
     );
   }
+
 
   // Build the workout level sentence
   Widget buildWorkoutLevel() {
@@ -264,10 +270,10 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
           const SizedBox(width: 8), // Spacing between icon and text
           RichText(
             text: TextSpan(
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: Colors.black, // Default text color
+                color: isDarkMode.value ? Colors.white : Colors.black,
               ),
               children: [
                 const TextSpan(text: "Workout level : "), // Normal text
@@ -378,36 +384,41 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
       final content =
           rawContent is String ? jsonDecode(rawContent) : rawContent;
 
-      return Container(
-        margin: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          color: Colors.teal[50],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.only(
-              left: 30, top: 30, right: 10, bottom: 15),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(left: 15),
-                child: const Text(
-                  "Workout Plan",
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black, // Header color changed to teal
+      return ValueListenableBuilder<bool>(
+        valueListenable: isDarkMode,
+        builder: (context, darkMode, child) {
+          return Container(
+            margin: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              color: darkMode ? Colors.grey[800] : Colors.teal[50],
+            ),
+            child: Padding(
+              padding: const EdgeInsets.only(
+                  left: 30, top: 30, right: 10, bottom: 15),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(left: 15),
+                    child: Text(
+                      "Workout Plan",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: darkMode ? Colors.white : Colors.black,
+                      ),
+                    ),
                   ),
-                ),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 30, top: 10),
+                    child: _buildWorkoutSection(content),
+                  ),
+                ],
               ),
-              Padding(
-                padding: const EdgeInsets.only(left: 30, top: 10),
-                child: _buildWorkoutSection(content),
-              ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       );
     } catch (e) {
       return _buildErrorCard('Failed to load plan: ${e.toString()}');
@@ -434,7 +445,12 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
                     return Checkbox(
                       shape: CircleBorder(),
                       value: isCompleted,
-                      activeColor: Colors.teal,
+                      activeColor: isDarkMode.value ? Colors.white : Colors.teal,
+                      checkColor: isDarkMode.value ? Colors.teal : Colors.white,
+                      side: BorderSide(
+                        color: isDarkMode.value ? Colors.white24 : Colors.grey, // Border color for inactive state
+                        width: 2, // Thickness of the border
+                      ),
                       onChanged: (bool? value) {
                         setState(() {
                           _completedExercises[exercise['exercise']] = value ?? false;
@@ -454,12 +470,16 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
                   children: [
                     Text(
                       exercise['exercise'],
-                      style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 16),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w500,
+                        fontSize: 16,
+                        color: isDarkMode.value ? Colors.white : Colors.black,
+                      ),
                     ),
                     Text(
                       "${exercise['duration']} mins • ${exercise['intensity']}",
                       style: TextStyle(
-                        color: Colors.grey[700], // Optional: Subtle color
+                        color: isDarkMode.value ? Colors.white70 : Colors.grey[700], // Optional: Subtle color
                       ),
                     ),
                   ],
@@ -489,72 +509,100 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
   Widget build(BuildContext context) {
     double screenHeight = MediaQuery.of(context).size.height;
 
-    return Scaffold(
-      body: Column(
-        children: [
-          // Section covering 30% of the screen with a background image
-          SizedBox(
-            height: screenHeight * 0.25, 
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                // Background image (Positioned to align from top)
-                Positioned.fill(
-                  child: Opacity(
-                    opacity: 0.9,
-                    child: Image.asset(
-                      'assets/workoutplan-banner.png', // Image path
-                      fit: BoxFit.none, // Ensures full width without cropping
-                      alignment:
-                          Alignment.topCenter, // Aligns the image from the top
+    return ValueListenableBuilder<bool>(
+      valueListenable: isDarkMode,
+      builder: (context, darkMode, child) {
+        return Scaffold(
+          backgroundColor: darkMode ? Colors.grey[900] : Colors.white,
+          body: Column(
+            children: [
+              // Section covering 30% of the screen with a background image
+              SizedBox(
+                height: screenHeight * 0.25, 
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    // Background image (Positioned to align from top)
+                    Positioned.fill(
+                      child: Opacity(
+                        opacity: 0.5,
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: Image.asset(
+                            'assets/workoutplan-banner.png', // Image path
+                            fit: BoxFit.none, // Ensures full width without cropping
+                            alignment:
+                                Alignment.topCenter, // Aligns the image from the top
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-
-                // Foreground content: Profile + Calendar, ensuring they fill the space
-                Column(
-                  children: [
-                    const SizedBox(height: 55), // Adjust for status bar
-                    buildProfileSection(), // Make it take up space
-                    const SizedBox(height: 20), // Add some space between profile and calendar
-                    buildCalendar(), // Ensure calendar fills space
+                    // Gradient overlay to create a fade effect at the bottom
+                    Positioned.fill(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.transparent, // Fully transparent at the top
+                              darkMode ? Colors.grey[900]! : Colors.transparent, // Fade to background color
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    // Foreground content: Profile + Calendar, ensuring they fill the space
+                    Column(
+                      children: [
+                        const SizedBox(height: 55), // Adjust for status bar
+                        buildProfileSection(), // Make it take up space
+                        const SizedBox(height: 20), // Add some space between profile and calendar
+                        buildCalendar(), // Ensure calendar fills space
+                      ],
+                    ),
                   ],
                 ),
-              ],
-            ),
-          ),
-          buildWorkoutLevel(), // Add workout level before workout cards
-          Expanded(
-            child: StreamBuilder<QuerySnapshot>(
-              stream: getWorkoutPlansForDate(selectedDate),
-              builder: (context, snapshot) {
-                if (snapshot.hasError) {
-                  return Center(child: Text("Error: ${snapshot.error}"));
-                }
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return const Center(
-                      child: Text("No workout plans found for this date"));
-                }
+              ),
+              buildWorkoutLevel(), // Add workout level before workout cards
+              Expanded(
+                child: StreamBuilder<QuerySnapshot>(
+                  stream: getWorkoutPlansForDate(selectedDate),
+                  builder: (context, snapshot) {
+                    if (snapshot.hasError) {
+                      return Center(child: Text("Error: ${snapshot.error}"));
+                    }
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                      return Center(
+                        child: Text(
+                          "No workout plans found",
+                          style: TextStyle(
+                            color: darkMode ? Colors.white : Colors.black,
+                          ),
+                        ),
+                      );
+                    }
 
-                return ListView(
-                  padding: const EdgeInsets.only(left: 10, right: 10),
-                  children: [
-                    ...snapshot.data!.docs.map((doc) {
-                      return buildWorkoutPlanCard(
-                          doc.data() as Map<String, dynamic>);
-                    }),
-                    const SizedBox(height: 100), // Add some space at the end
-                  ],
-                );
-              },
-            ),
+                    return ListView(
+                      padding: const EdgeInsets.only(left: 10, right: 10),
+                      children: [
+                        ...snapshot.data!.docs.map((doc) {
+                          return buildWorkoutPlanCard(
+                              doc.data() as Map<String, dynamic>);
+                        }),
+                        const SizedBox(height: 100), // Add some space at the end
+                      ],
+                    );
+                  },
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
-      backgroundColor: Colors.white,
+        );
+      },
     );
   }
 }

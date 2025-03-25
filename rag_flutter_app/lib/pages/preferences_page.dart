@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '/services/globals.dart'; // Import the shared isDarkMode variable
 
 class PreferencesPage extends StatefulWidget {
   @override
@@ -104,98 +105,168 @@ class _PreferencesPageState extends State<PreferencesPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('Edit Preferences')),
-      body: _isLoading
-          ? Center(child: CircularProgressIndicator())
-          : Padding(
-              padding: EdgeInsets.all(16.0),
-              child: Form(
-                key: _formKey,
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      _buildTextField(foodController, 'Preference Food'),
-                      SizedBox(height: 15),
-                      _buildTextField(allergiesController, 'Food Allergies'),
-                      SizedBox(height: 15),
-                      _buildTextField(preferencesController, 'Health Conditions'),
-                      SizedBox(height: 30),
-                      Text("Fitness Goals"),
-                      SizedBox(height: 10),
-                      _buildCheckbox("Weight Loss", option1, (val) => setState(() => option1 = val)),
-                      _buildCheckbox("Muscle Gain", option2, (val) => setState(() => option2 = val)),
-                      _buildCheckbox("Strength", option3, (val) => setState(() => option3 = val)),
-                      _buildCheckbox("Endurance", option4, (val) => setState(() => option4 = val)),
-                      SizedBox(height: 25),
-                      Text("Workout Level"),
-                      SizedBox(height: 25),
-                      SizedBox(
-                        width: 325,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text("Mild", style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
-                            Expanded(
-                              child: Slider(
-                                value: workoutLevel,
-                                min: 0,
-                                max: 4,
-                                divisions: 4,
-                                label: workoutLevel.toStringAsFixed(0),
-                                onChanged: (value) {
-                                  setState(() {
-                                    workoutLevel = value;
-                                  });
-                                },
-                                activeColor: Color(0xFF008080),
-                                inactiveColor: Colors.grey[300],
-                              ),
+    return ValueListenableBuilder<bool>(
+      valueListenable: isDarkMode,
+      builder: (context, darkMode, child) {
+        return Scaffold(
+          backgroundColor: darkMode ? Colors.grey[900] : Colors.white,
+          appBar: AppBar(
+            title: Text('Edit Preferences'),
+            backgroundColor: darkMode ? Colors.grey[900] : Colors.white,
+            iconTheme: IconThemeData(color: darkMode ? Colors.grey : Colors.black),
+            titleTextStyle: TextStyle(
+              color: darkMode ? Colors.white : Colors.black,
+              fontSize: 20,
+              fontWeight: FontWeight.w400,
+            ),
+          ),
+          body: _isLoading
+              ? Center(child: CircularProgressIndicator())
+              : Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: Form(
+                    key: _formKey,
+                    child: SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          _buildTextField(foodController, 'Preference Food', darkMode),
+                          SizedBox(height: 15),
+                          _buildTextField(allergiesController, 'Food Allergies', darkMode),
+                          SizedBox(height: 15),
+                          _buildTextField(preferencesController, 'Health Conditions', darkMode),
+                          SizedBox(height: 30),
+                          Text(
+                            "Fitness Goals",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: darkMode ? Colors.white : Colors.black,
                             ),
-                            Text("Intense", style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
-                          ],
-                        ),
-                      ),
-                      SizedBox(height: 30),
-                      _isSubmitting
-                          ? CircularProgressIndicator()
-                          : ElevatedButton(
-                              onPressed: _updatePreferences,
-                              style: ElevatedButton.styleFrom(
-                                foregroundColor: Colors.white, backgroundColor: Color(0xFF008080),
-                                fixedSize: Size(314, 48),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(24),
+                          ),
+                          SizedBox(height: 10),
+                          _buildCheckbox("Weight Loss", option1, (val) => setState(() => option1 = val), darkMode),
+                          _buildCheckbox("Muscle Gain", option2, (val) => setState(() => option2 = val), darkMode),
+                          _buildCheckbox("Strength", option3, (val) => setState(() => option3 = val), darkMode),
+                          _buildCheckbox("Endurance", option4, (val) => setState(() => option4 = val), darkMode),
+                          SizedBox(height: 25),
+                          Text(
+                            "Workout Level",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: darkMode ? Colors.white : Colors.black,
+                            ),
+                          ),
+                          SizedBox(height: 25),
+                          SizedBox(
+                            width: 325,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  "Mild",
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                    color: darkMode ? Colors.white70 : Colors.black,
+                                  ),
                                 ),
-                              ),
-                              child: Text('Save', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+                                Expanded(
+                                  child: Slider(
+                                    value: workoutLevel,
+                                    min: 0,
+                                    max: 4,
+                                    divisions: 4,
+                                    label: workoutLevel.toStringAsFixed(0),
+                                    onChanged: (value) {
+                                      setState(() {
+                                        workoutLevel = value;
+                                      });
+                                    },
+                                    activeColor: darkMode ? Colors.tealAccent : Color(0xFF008080),
+                                    inactiveColor: darkMode ? Colors.white24 : Colors.grey[300],
+                                  ),
+                                ),
+                                Text(
+                                  "Intense",
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                    color: darkMode ? Colors.white70 : Colors.black,
+                                  ),
+                                ),
+                              ],
                             ),
-                    ],
+                          ),
+                          SizedBox(height: 30),
+                          _isSubmitting
+                              ? CircularProgressIndicator()
+                              : ElevatedButton(
+                                  onPressed: _updatePreferences,
+                                  style: ElevatedButton.styleFrom(
+                                    foregroundColor: Colors.white,
+                                    backgroundColor: darkMode ? Colors.grey[700] : Color(0xFF008080),
+                                    fixedSize: Size(314, 48),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(24),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    'Save',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ),
+        );
+      },
     );
   }
 
-  Widget _buildTextField(TextEditingController controller, String label) {
+  Widget _buildTextField(TextEditingController controller, String label, bool darkMode) {
     return TextFormField(
       controller: controller,
       decoration: InputDecoration(
         labelText: label,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(24)),
+        labelStyle: TextStyle(color: darkMode ? Colors.white70 : Colors.black),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(24),
+          borderSide: BorderSide(color: darkMode ? Colors.white24 : Colors.grey),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(24),
+          borderSide: BorderSide(color: darkMode ? Colors.white24 : Colors.grey),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(24),
+          borderSide: BorderSide(color: darkMode ? Colors.tealAccent : Color(0xFF008080)),
+        ),
       ),
+      style: TextStyle(color: darkMode ? Colors.white : Colors.black),
       validator: (value) => value!.isEmpty ? 'Please enter your $label' : null,
     );
   }
 
-  Widget _buildCheckbox(String label, bool value, Function(bool) onChanged) {
+  Widget _buildCheckbox(String label, bool value, Function(bool) onChanged, bool darkMode) {
     return CheckboxListTile(
-      title: Text(label, style: TextStyle(fontSize: 14)),
+      title: Text(
+        label,
+        style: TextStyle(
+          fontSize: 14,
+          color: darkMode ? Colors.white70 : Colors.black,
+        ),
+      ),
       value: value,
       onChanged: (bool? newValue) => onChanged(newValue ?? false),
-      activeColor: Color(0xFF008080),
+      activeColor: darkMode ? Colors.tealAccent : Color(0xFF008080),
+      checkColor: darkMode ? Colors.black : Colors.white,
     );
   }
 }

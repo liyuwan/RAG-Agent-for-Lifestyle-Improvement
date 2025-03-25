@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
+import '/services/globals.dart'; // Import the shared isDarkMode variable
 import 'package:rag_flutter_app/services/api_service.dart';
 
 class VoiceChatScreen extends StatefulWidget {
@@ -66,16 +67,15 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> with SingleTickerProv
     if (!_isListening) {
       setState(() {
         _isListening = true;
-        _displayText = "Listening..."; // Show "Listening..." initially
+        _displayText = "Listening...";
       });
       _animationController.repeat();
 
       await _speechToText.listen(onResult: (result) {
-        // Only update transcription if still listening
         if (_isListening) {
           setState(() {
             _transcription = result.recognizedWords;
-            _displayText = _transcription; // Update display text with the user's speech
+            _displayText = _transcription;
           });
         }
       });
@@ -92,9 +92,9 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> with SingleTickerProv
       if (_transcription.isNotEmpty) {
         _addToConversation("user", _transcription);
         setState(() {
-          _displayText = "Processing..."; // Show "Processing..." while waiting for the response
+          _displayText = "Processing...";
         });
-        await _getResponseFromApi(_transcription); // Wait for the response
+        await _getResponseFromApi(_transcription);
       } else {
         setState(() {
           _displayText = "No speech detected.";
@@ -106,29 +106,23 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> with SingleTickerProv
   }
 
   Future<void> _getResponseFromApi(String query) async {
-    // Step 1: Show "Processing..." immediately
     setState(() {
-      _displayText = "Processing..."; // Show "Processing..." while waiting for the response
+      _displayText = "Processing...";
     });
 
-    // Step 2: Allow the UI to update before making the API call
     await Future.delayed(const Duration(milliseconds: 100));
 
     try {
-      // Step 3: Fetch the response from the API
       String apiResponse = await _apiService.getResponseFromApi(query);
 
-      // Step 4: Update the response and display text
       setState(() {
         _response = apiResponse;
-        _displayText = _response; // Update display text with the response
+        _displayText = _response;
       });
 
-      // Add the response to the conversation and speak it
       _addToConversation("bot", apiResponse);
       await _speak(apiResponse);
     } catch (e) {
-      // Step 5: Handle errors and update the display text
       setState(() {
         _displayText = "Error: $e";
       });
@@ -136,18 +130,18 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> with SingleTickerProv
   }
 
   Future<void> _speak(String text) async {
-    String sanitizedText = _removeEmojis(text); // Remove emojis from the text
-    List<String> chunks = _splitTextIntoChunks(sanitizedText, 200); // Split text into chunks of 200 characters
+    String sanitizedText = _removeEmojis(text);
+    List<String> chunks = _splitTextIntoChunks(sanitizedText, 200);
     for (String chunk in chunks) {
       setState(() {
-        _currentChunk = chunk; // Update the displayed chunk dynamically
+        _currentChunk = chunk;
       });
       await _flutterTts.speak(chunk);
-      await _flutterTts.awaitSpeakCompletion(true); // Wait for the current chunk to finish
+      await _flutterTts.awaitSpeakCompletion(true);
     }
     setState(() {
-      _currentChunk = ""; // Clear the current chunk after speaking
-      _displayText = "Tap the mic to speak"; // Reset the display text
+      _currentChunk = "";
+      _displayText = "Tap the mic to speak";
     });
   }
 
@@ -164,17 +158,13 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> with SingleTickerProv
     int index = 0;
 
     while (index < text.length) {
-      // Find the nearest space before the chunk limit
       int end = (index + chunkSize).clamp(0, text.length);
       int spaceIndex = text.lastIndexOf(' ', end);
 
-      // Split at the space if found within the chunk window
       if (spaceIndex != -1 && spaceIndex > index) {
         chunks.add(text.substring(index, spaceIndex));
-        index = spaceIndex + 1; // Skip the space
-      } 
-      // Fallback: Split at chunk size (avoids infinite loops)
-      else {
+        index = spaceIndex + 1;
+      } else {
         chunks.add(text.substring(index, end));
         index = end;
       }
@@ -203,112 +193,128 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> with SingleTickerProv
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: const Text("Voice Chat"),
-        backgroundColor: Colors.transparent,
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Robot Image
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 500),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: _isListening ? Colors.redAccent.withOpacity(0.5)
-                        : const Color(0xFF66B2B2).withOpacity(0.5),
-                    blurRadius: 30,
-                    spreadRadius: 10,
-                    offset: const Offset(0, 10),
+    return ValueListenableBuilder<bool>(
+      valueListenable: isDarkMode,
+      builder: (context, darkMode, child) {
+        return Scaffold(
+          backgroundColor: darkMode ? Colors.grey[900] : Colors.white,
+          appBar: AppBar(
+            title: const Text("Voice Chat"),
+            backgroundColor: darkMode ? Colors.grey[900] : Colors.transparent,
+            iconTheme: IconThemeData(color: darkMode ? Colors.grey : Colors.black),
+            titleTextStyle: TextStyle(
+              color: darkMode ? Colors.white : Colors.black,
+              fontSize: 22,
+              fontWeight: FontWeight.w400,
+            ),
+          ),
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 500),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: _isListening
+                            ? Colors.redAccent.withOpacity(0.5)
+                            : (darkMode
+                                ? Colors.tealAccent.withOpacity(0.5)
+                                : const Color(0xFF66B2B2).withOpacity(0.5)),
+                        blurRadius: 30,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              child: ClipOval(
-                child: Image.asset(
-                  'assets/robot.jpg',
-                  width: 250,
-                  height: 250,
-                  fit: BoxFit.cover,
-                ),
-              ),
-            ),
-            const SizedBox(height: 40),
-
-            // Display Text (App State or Current Chunk)
-            Container(
-              width: MediaQuery.of(context).size.width * 0.85,
-              height: 200, // Fixed height for the text container
-              padding: const EdgeInsets.all(20.0),
-              child: SingleChildScrollView(
-                child: Text(
-                  _currentChunk.isNotEmpty
-                      ? _currentChunk // Show the current chunk being read
-                      : _displayText, // Fallback to _displayText if no chunk is being read
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            ),
-            const SizedBox(height: 30),
-
-            // Mic Button
-            GestureDetector(
-              onTap: () {
-                if (_isListening) {
-                  _stopListening();
-                } else {
-                  _startListening();
-                }
-              },
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  if (_isListening)
-                    ...List.generate(3, (index) {
-                      return AnimatedBuilder(
-                        animation: _animationController,
-                        builder: (context, child) {
-                          final progress = (_animationController.value + index * 0.33) % 1.0;
-                          final scale = 1.0 + progress;
-                          final opacity = 1.0 - progress;
-                          
-                          return Transform.scale(
-                            scale: scale,
-                            child: Opacity(
-                              opacity: opacity,
-                              child: Container(
-                                width: 100,
-                                height: 100,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: Colors.red.withOpacity(0.2),
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      );
-                    }),
-                  CircleAvatar(
-                    radius: 50,
-                    backgroundColor: _isListening ? Colors.red : const Color(0xFF66B2B2),
-                    child: const Icon(
-                      Icons.mic,
-                      color: Colors.white,
-                      size: 40,
+                  child: ClipOval(
+                    child: Image.asset(
+                      'assets/robot.jpg',
+                      width: 250,
+                      height: 250,
+                      fit: BoxFit.cover,
                     ),
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 40),
+                Container(
+                  width: MediaQuery.of(context).size.width * 0.85,
+                  height: 200,
+                  padding: const EdgeInsets.all(20.0),
+                  decoration: BoxDecoration(
+                    color: Colors.transparent,
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  child: SingleChildScrollView(
+                    child: Text(
+                      _currentChunk.isNotEmpty ? _currentChunk : _displayText,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: darkMode ? Colors.white70 : Colors.black,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 30),
+                GestureDetector(
+                  onTap: () {
+                    if (_isListening) {
+                      _stopListening();
+                    } else {
+                      _startListening();
+                    }
+                  },
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      if (_isListening)
+                        ...List.generate(3, (index) {
+                          return AnimatedBuilder(
+                            animation: _animationController,
+                            builder: (context, child) {
+                              final progress = (_animationController.value + index * 0.33) % 1.0;
+                              final scale = 1.0 + progress;
+                              final opacity = 1.0 - progress;
+
+                              return Transform.scale(
+                                scale: scale,
+                                child: Opacity(
+                                  opacity: opacity,
+                                  child: Container(
+                                    width: 100,
+                                    height: 100,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: Colors.red.withOpacity(0.2),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          );
+                        }),
+                      CircleAvatar(
+                        radius: 50,
+                        backgroundColor: _isListening
+                            ? Colors.red
+                            : (darkMode ? Colors.grey[700] : const Color(0xFF66B2B2)),
+                        child: const Icon(
+                          Icons.mic,
+                          color: Colors.white,
+                          size: 40,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }

@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '/pages/login_page.dart';
 import '/pages/preferences_page.dart';
 import '/pages/profile_page.dart';
+import '/services/globals.dart';
 
 Widget _buildProfileSection(BuildContext context) {
   return GestureDetector(
@@ -17,7 +18,7 @@ Widget _buildProfileSection(BuildContext context) {
       height: 78,
       padding: EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDarkMode.value ? Colors.grey[800] : Colors.white,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
@@ -64,7 +65,11 @@ Widget _buildProfileSection(BuildContext context) {
           SizedBox(width: 20),
           Text(
             'Profile',
-            style: TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.w500),
+            style: TextStyle(
+              color: isDarkMode.value ? Colors.white : Colors.black,
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+            ),
           ),
           Spacer(),
           Icon(Icons.arrow_forward_ios, color: Colors.grey),
@@ -76,34 +81,58 @@ Widget _buildProfileSection(BuildContext context) {
 
 Widget _buildDarkModeSection(BuildContext context) {
   return GestureDetector(
-    onTap: () => print('Dark Mode'), /////////////////////////// Put dark mode logic here
-    child: Container(
-      width: 160,
-      height: 160,
-      padding: EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            spreadRadius: 0,
-            blurRadius: 4,
-            offset: const Offset(0, 0), // Shadow appears below the container
+    onTap: () {
+      isDarkMode.value = !isDarkMode.value; // Toggle dark mode
+    },
+    child: ValueListenableBuilder<bool>(
+      valueListenable: isDarkMode,
+      builder: (context, darkMode, child) {
+        return Container(
+          width: 160,
+          height: 160,
+          padding: EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: darkMode ? Colors.grey[800] : Colors.white,
+            borderRadius: BorderRadius.circular(22),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.2),
+                spreadRadius: 0,
+                blurRadius: 4,
+                offset: const Offset(0, 0), // Shadow appears below the container
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(Icons.dark_mode_outlined, color: Colors.grey, size: 25,),
-          SizedBox(height: 25,),
-          Text('Dark Mode', style: TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.w500),),
-          SizedBox(height: 5,),
-          Text('Off', style: TextStyle(color: Colors.grey, fontSize: 14),),
-        ],
-      ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                darkMode ? Icons.dark_mode : Icons.light_mode,
+                color: darkMode ? Colors.white : Colors.grey,
+                size: 25,
+              ),
+              SizedBox(height: 25),
+              Text(
+                'Dark Mode',
+                style: TextStyle(
+                  color: darkMode ? Colors.white : Colors.black,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              SizedBox(height: 5),
+              Text(
+                darkMode ? 'On' : 'Off',
+                style: TextStyle(
+                  color: darkMode ? Colors.white70 : Colors.grey,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     ),
   );
 }
@@ -152,7 +181,7 @@ Widget _buildFeedbackSection(BuildContext context) {
     height: 118,
     padding: EdgeInsets.all(18),
     decoration: BoxDecoration(
-      color: Colors.teal[50],
+      color: isDarkMode.value ? Colors.grey[800] : Colors.teal[50],
       borderRadius: BorderRadius.circular(13),
       boxShadow: [
         BoxShadow(
@@ -169,7 +198,7 @@ Widget _buildFeedbackSection(BuildContext context) {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Feedback & Support', style: TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.w500),),
+            Text('Feedback & Support', style: TextStyle(color: isDarkMode.value ? Colors.white : Colors.black, fontSize: 16, fontWeight: FontWeight.w500),),
             SizedBox(height: 20,),
             Text('123@lamduan.mfu.ac.th', style: TextStyle(color: Colors.teal, fontSize: 14),),
           ],
@@ -226,7 +255,7 @@ Widget _buildTermsAndPolicySection(BuildContext context) {
       height: 118,
       padding: EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDarkMode.value ? Colors.grey[800] : Colors.white,
         borderRadius: BorderRadius.circular(13),
         boxShadow: [
           BoxShadow(
@@ -245,7 +274,7 @@ Widget _buildTermsAndPolicySection(BuildContext context) {
             children: [
               Text(
                 'Terms & Privacy Policy',
-                style: TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.w500),
+                style: TextStyle(color: isDarkMode.value ? Colors.white : Colors.black, fontSize: 16, fontWeight: FontWeight.w500),
               ),
               SizedBox(height: 20),
               Text(
@@ -282,7 +311,7 @@ Widget _buildLogOutButton(BuildContext context) {
       height: 62,
       padding: EdgeInsets.symmetric(vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDarkMode.value ? Colors.grey[800] : Colors.white,
         borderRadius: BorderRadius.circular(30),
         boxShadow: [
           BoxShadow(
@@ -297,11 +326,11 @@ Widget _buildLogOutButton(BuildContext context) {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           SizedBox(width: 40,),
-          Text('Log Out', style: TextStyle(color: Colors.red[800], fontSize: 16, fontWeight: FontWeight.w500),),
+          Text('Log Out', style: TextStyle(color: isDarkMode.value ? Colors.redAccent : Colors.red[800], fontSize: 16, fontWeight: FontWeight.w500),),
           Spacer(),
           CircleAvatar(
             radius: 20,
-            backgroundColor: Colors.red[50],
+            backgroundColor: isDarkMode.value ? Colors.grey[300] : Colors.red[50],
             child: Icon(Icons.logout, color: Colors.red,)
           ),
           SizedBox(width: 10,),
@@ -314,44 +343,50 @@ Widget _buildLogOutButton(BuildContext context) {
 class SettingsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: Text('Settings'),
-        titleTextStyle: TextStyle(
-          color: Colors.teal,
-          fontWeight: FontWeight.w500,
-          fontSize: 22,
-        ),
-        automaticallyImplyLeading: true,
-        centerTitle: false,
-        backgroundColor: Colors.white,
-      ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 30,),
-          child: Column(
-            children: [
-              SizedBox(height: 10,),
-              _buildProfileSection(context),
-              SizedBox(height: 13,),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return ValueListenableBuilder<bool>(
+      valueListenable: isDarkMode,
+      builder: (context, darkMode, child) {
+        return Scaffold(
+          backgroundColor: darkMode ? Colors.grey[900] : Colors.white,
+          appBar: AppBar(
+            title: Text('Settings'),
+            titleTextStyle: TextStyle(
+              color: Colors.teal,
+              fontWeight: FontWeight.w500,
+              fontSize: 22,
+            ),
+            automaticallyImplyLeading: true,
+            centerTitle: false,
+            iconTheme: IconThemeData(color: isDarkMode.value ? Colors.grey : Colors.black),
+            backgroundColor: darkMode ? Colors.grey[900] : Colors.white,
+          ),
+          body: SingleChildScrollView(
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 30),
+              child: Column(
                 children: [
-                  _buildDarkModeSection(context),
-                  _buildPreferencesSection(context),
+                  SizedBox(height: 10),
+                  _buildProfileSection(context),
+                  SizedBox(height: 13),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildDarkModeSection(context),
+                      _buildPreferencesSection(context),
+                    ],
+                  ),
+                  SizedBox(height: 13),
+                  _buildFeedbackSection(context),
+                  SizedBox(height: 13),
+                  _buildTermsAndPolicySection(context),
+                  SizedBox(height: 13),
+                  _buildLogOutButton(context),
                 ],
               ),
-              SizedBox(height: 13,),
-              _buildFeedbackSection(context,),
-              SizedBox(height: 13,),
-              _buildTermsAndPolicySection(context),
-              SizedBox(height: 13,),
-              _buildLogOutButton(context),
-            ],
+            ),
           ),
-        ),
-      )
+        );
+      },
     );
   }
 }
