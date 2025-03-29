@@ -3,7 +3,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import '../widgets/settings_button.dart';
-import '/services/globals.dart'; // Import the globals file for isDarkMode
+import '/services/globals.dart';
+import '/services/api_service.dart';
 import 'dart:convert';
 
 class WorkoutPlanPage extends StatefulWidget {
@@ -18,6 +19,8 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
   String username = '';
   String workoutLevel = ''; // Store the workout level
   Map<String, bool> _completedExercises = {};
+  ApiService apiService = ApiService(baseUrl: 'http://127.0.0.1:5000');
+  bool isGenerating = false;
 
   @override
   void initState() {
@@ -84,9 +87,9 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
         .collection('users')
         .doc(user.uid)
         .collection('workout_plans')
-        .where('type', isEqualTo: 'workout')
         .where('target_date', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
         .where('target_date', isLessThanOrEqualTo: Timestamp.fromDate(endOfDay))
+        .orderBy('date', descending: true)
         .orderBy('target_date', descending: true)
         .limit(1)
         .snapshots();
@@ -292,94 +295,54 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
     );
   }
 
-  Future<void> _saveCompletedExercises(String userId, DateTime targetDate, Map<String, bool> completedExercises, List<Map<String, dynamic>> allExercises) async {
-    try {
-      // Ensure all exercises are included
-      for (var exercise in allExercises) {
-        completedExercises.putIfAbsent(exercise['exercise'], () => false);
-      }
-
-      bool allCompleted = completedExercises.values.every((v) => v);
-
-      // Fetch user data
-      final userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
-      final data = userDoc.data() ?? {};
-      
-      int currentStreak = data['consistencyStreak'] ?? 0;
-      int highestStreak = data['highestStreak'] ?? 0;
-      DateTime? lastStreakDate = (data['lastStreakDate'] as Timestamp?)?.toDate();
-      DateTime? highestStreakDate = (data['highestStreakDate'] as Timestamp?)?.toDate();
-
-      // Helper function for date comparison
-      bool isSameDay(DateTime? a, DateTime? b) {
-        if (a == null || b == null) return false;
-        return a.year == b.year && a.month == b.month && a.day == b.day;
-      }
-
-      // Calculate new values
-      int newStreak = currentStreak;
-      int newHighestStreak = highestStreak;
-      DateTime? newLastStreakDate = lastStreakDate;
-      DateTime? newHighestStreakDate = highestStreakDate;
-
-      if (allCompleted) {
-        // Handle exercise completion
-        final isConsecutive = lastStreakDate != null && 
-            targetDate.difference(lastStreakDate).inDays == 1;
-        
-        newStreak = isConsecutive ? currentStreak + 1 : 1;
-        newLastStreakDate = targetDate;
-
-        // Update highest streak only if new streak exceeds previous record
-        if (newStreak > highestStreak) {
-          newHighestStreak = newStreak;
-          newHighestStreakDate = targetDate;
-        }
-      } else {
-        // Handle exercise unchecking
-        if (isSameDay(lastStreakDate, targetDate)) {
-          // Only modify if unchecking the last streak day
-          newStreak = currentStreak > 0 ? currentStreak - 1 : 0;
-          newLastStreakDate = lastStreakDate?.subtract(Duration(days: 1));
-
-          // Roll back highest streak only if it was set on the uncheck date
-          if (isSameDay(highestStreakDate, targetDate)) {
-            newHighestStreak = newStreak;
-            newHighestStreakDate = newLastStreakDate;
-          }
-        }
-      }
-
-      // Update Firestore documents
-      final completionsRef = FirebaseFirestore.instance
-          .collection('users')
-          .doc(userId)
-          .collection('exercise_completions')
-          .doc(DateFormat('yyyy-MM-dd').format(targetDate));
-
-      await completionsRef.set({
-        'date': targetDate,
-        'completed_exercises': completedExercises,
-      });
-
-      await FirebaseFirestore.instance.collection('users').doc(userId).update({
-        'consistencyStreak': newStreak,
-        'lastStreakDate': newLastStreakDate != null 
-            ? Timestamp.fromDate(newLastStreakDate)
-            : null,
-        'highestStreak': newHighestStreak,
-        'highestStreakDate': newHighestStreakDate != null 
-            ? Timestamp.fromDate(newHighestStreakDate)
-            : null,
-      });
-    } catch (e) {
-      print('Error saving exercises: $e');
-    }
+  /// Workout plan generate/update button
+  Widget buildWorkoutPlanGenerateButton(buttonText, isWeekly) {
+    return ElevatedButton(
+      onPressed: isGenerating
+          ? null // Disable button when Generating
+          : () async {
+              setState(() => isGenerating = true);
+              try {
+                // Pass the selected date as the start_date parameter
+                await apiService.getResponseFromApi(
+                  "Update my workout plan",
+                  isWeekly,
+                  startDate: DateFormat('yyyy-MM-dd').format(selectedDate),
+                );
+              } finally {
+                setState(() => isGenerating = false);
+              }
+            },
+      style: ElevatedButton.styleFrom(
+        backgroundColor: isDarkMode.value ? Colors.grey[850] : Colors.teal[400],
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+      ),
+      child: isGenerating
+          ? SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                color: Colors.white,
+                strokeWidth: 2,
+              ),
+            )
+          : Text(buttonText,
+              style: TextStyle(
+                fontWeight: FontWeight.w500,
+                color: Colors.white,
+              )),
+    );
   }
-  
+
   /// Build workout plan card with a toggleable checkmark
   Widget buildWorkoutPlanCard(Map<String, dynamic> data) {
     try {
+      bool isCurrentDay = selectedDate.day == DateTime.now().day &&
+                        selectedDate.month == DateTime.now().month &&
+                        selectedDate.year == DateTime.now().year;
       final rawContent = data['content'];
       final content =
           rawContent is String ? jsonDecode(rawContent) : rawContent;
@@ -400,18 +363,26 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Padding(
-                    padding: const EdgeInsets.only(left: 15),
-                    child: Text(
-                      "Workout Plan",
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: darkMode ? Colors.white : Colors.black,
-                      ),
+                    padding: const EdgeInsets.symmetric(horizontal: 15),
+                    child: Row(
+                      children: [
+                        Text(
+                          "Workout Plan",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: darkMode ? Colors.white : Colors.black,
+                          ),
+                        ),
+                        const Spacer(),
+                        if (isCurrentDay)
+                          buildWorkoutPlanGenerateButton("Update", "false"),
+                      ],
                     ),
                   ),
+                  const SizedBox(height: 10),
                   Padding(
-                    padding: const EdgeInsets.only(left: 30, top: 10),
+                    padding: const EdgeInsets.only(left: 15, right: 15, top: 10),
                     child: _buildWorkoutSection(content),
                   ),
                 ],
@@ -505,6 +476,92 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
     );
   }
 
+  Future<void> _saveCompletedExercises(String userId, DateTime targetDate, Map<String, bool> completedExercises, List<Map<String, dynamic>> allExercises) async {
+    try {
+      // Ensure all exercises are included
+      for (var exercise in allExercises) {
+        completedExercises.putIfAbsent(exercise['exercise'], () => false);
+      }
+
+      bool allCompleted = completedExercises.values.every((v) => v);
+
+      // Fetch user data
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+      final data = userDoc.data() ?? {};
+      
+      int currentStreak = data['consistencyStreak'] ?? 0;
+      int highestStreak = data['highestStreak'] ?? 0;
+      DateTime? lastStreakDate = (data['lastStreakDate'] as Timestamp?)?.toDate();
+      DateTime? highestStreakDate = (data['highestStreakDate'] as Timestamp?)?.toDate();
+
+      // Helper function for date comparison
+      bool isSameDay(DateTime? a, DateTime? b) {
+        if (a == null || b == null) return false;
+        return a.year == b.year && a.month == b.month && a.day == b.day;
+      }
+
+      // Calculate new values
+      int newStreak = currentStreak;
+      int newHighestStreak = highestStreak;
+      DateTime? newLastStreakDate = lastStreakDate;
+      DateTime? newHighestStreakDate = highestStreakDate;
+
+      if (allCompleted) {
+        // Handle exercise completion
+        final isConsecutive = lastStreakDate != null && 
+            targetDate.difference(lastStreakDate).inDays == 1;
+        
+        newStreak = isConsecutive ? currentStreak + 1 : 1;
+        newLastStreakDate = targetDate;
+
+        // Update highest streak only if new streak exceeds previous record
+        if (newStreak > highestStreak) {
+          newHighestStreak = newStreak;
+          newHighestStreakDate = targetDate;
+        }
+      } else {
+        // Handle exercise unchecking
+        if (isSameDay(lastStreakDate, targetDate)) {
+          // Only modify if unchecking the last streak day
+          newStreak = currentStreak > 0 ? currentStreak - 1 : 0;
+          newLastStreakDate = lastStreakDate?.subtract(Duration(days: 1));
+
+          // Roll back highest streak only if it was set on the uncheck date
+          if (isSameDay(highestStreakDate, targetDate)) {
+            newHighestStreak = newStreak;
+            newHighestStreakDate = newLastStreakDate;
+          }
+        }
+      }
+
+      // Update Firestore documents
+      final completionsRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .collection('exercise_completions')
+          .doc(DateFormat('yyyy-MM-dd').format(targetDate));
+
+      await completionsRef.set({
+        'date': targetDate,
+        'completed_exercises': completedExercises,
+      });
+
+      await FirebaseFirestore.instance.collection('users').doc(userId).update({
+        'consistencyStreak': newStreak,
+        'lastStreakDate': newLastStreakDate != null 
+            ? Timestamp.fromDate(newLastStreakDate)
+            : null,
+        'highestStreak': newHighestStreak,
+        'highestStreakDate': newHighestStreakDate != null 
+            ? Timestamp.fromDate(newHighestStreakDate)
+            : null,
+      });
+    } catch (e) {
+      print('Error saving exercises: $e');
+    }
+  }
+  
+
   @override
   Widget build(BuildContext context) {
     double screenHeight = MediaQuery.of(context).size.height;
@@ -576,18 +633,41 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
                       return const Center(child: CircularProgressIndicator());
                     }
                     if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                      return Center(
-                        child: Text(
-                          "No workout plans found",
-                          style: TextStyle(
-                            color: darkMode ? Colors.white : Colors.black,
+                      // Check if the selected date meets the conditions
+                      final now = DateTime.now();
+                      final isWithinOneWeek = selectedDate.isAfter(now) && selectedDate.difference(now).inDays <= 7;
+
+                      if (isWithinOneWeek) {
+                        return Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                "No workout plans found",
+                                style: TextStyle(
+                                  color: darkMode ? Colors.white : Colors.black,
+                                ),
+                              ),
+                              const SizedBox(height: 20),
+                              buildWorkoutPlanGenerateButton("Generate a workout plan", "true"),
+                              const SizedBox(height: 60),
+                            ],
                           ),
-                        ),
-                      );
+                        );
+                      } else {
+                        return Center(
+                          child: Text(
+                            "No workout plans available for the selected date",
+                            style: TextStyle(
+                              color: darkMode ? Colors.white : Colors.black,
+                            ),
+                          ),
+                        );
+                      }
                     }
 
                     return ListView(
-                      padding: const EdgeInsets.only(left: 10, right: 10),
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
                       children: [
                         ...snapshot.data!.docs.map((doc) {
                           return buildWorkoutPlanCard(

@@ -15,10 +15,10 @@ def generate_nutrient_context(targets):
         "Select foods from the following options:\n"
     )
 
-def generate_and_save_meal_plan(userId, query, SYSTEM_PROMPT, biometric_info, context_info):
+def generate_and_save_meal_plan(userId, query, SYSTEM_PROMPT, biometric_info, context_info, isWeekly, start_date=None):
     meal_instructions = (
         "Create a varied meal plan using the food items provided in the context, following these rules:\n"
-        "1. Use MAXIMUM 2 servings of any single food item per day across all meals combined (e.g., an item can appear in one meal once and another meal once, but never three times total).\n"
+        "1. Use ONLY 2 servings MAXIMUM of any single food item per day across all meals combined (e.g., an item can appear in one meal once and another meal once, but never three times total).\n"
         "2. Include different protein sources in each meal (e.g., beef in one, chicken in another).\n"
         "3. Ensure vegetables or fruits are included in at least 2 meals.\n"
         "4. Total daily calories must match the nutritional targets.\n"
@@ -47,9 +47,12 @@ def generate_and_save_meal_plan(userId, query, SYSTEM_PROMPT, biometric_info, co
     )
     
     weekly_meal_plans = []
-    start_date = datetime.now()
+    # Use the provided start_date or default to today
+    start_date = start_date or datetime.now().date()
+    start_date = datetime.combine(start_date, datetime.min.time())  # Ensure time is set to 00:00:00
     
-    for day in range(7):
+    days_range = 7 if isWeekly else 1
+    for day in range(days_range):
         prompt = (
             f"System Instructions:\n{SYSTEM_PROMPT}\n\n"
             f"Given the following context and user information, generate a meal plan in JSON format as instructed.\n\n"
@@ -88,7 +91,7 @@ def generate_and_save_meal_plan(userId, query, SYSTEM_PROMPT, biometric_info, co
     else:
         return "Error generating weekly meal plan. Please try again."
 
-def generate_and_save_workout_plan(userId, query, SYSTEM_PROMPT, biometric_info, context_info):
+def generate_and_save_workout_plan(userId, query, SYSTEM_PROMPT, biometric_info, context_info, isWeekly, start_date=None):
     workout_instructions = (
         "Please generate a workout plan in JSON format using the following format:\n\n"
         '''[
@@ -101,9 +104,12 @@ def generate_and_save_workout_plan(userId, query, SYSTEM_PROMPT, biometric_info,
     )
     
     weekly_workout_plans = []
-    start_date = datetime.now()
+    # Use the provided start_date or default to today
+    start_date = start_date or datetime.now().date()
+    start_date = datetime.combine(start_date, datetime.min.time())  # Ensure time is set to 00:00:00
     
-    for day in range(7):
+    days_range = 7 if isWeekly else 1
+    for day in range(days_range):
         prompt = (
             f"System Instructions:\n{SYSTEM_PROMPT}\n\n"
             f"Given the following context and user information, generate a workout plan in JSON format as instructed.\n\n"

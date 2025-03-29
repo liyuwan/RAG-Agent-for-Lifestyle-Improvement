@@ -7,22 +7,15 @@ class ApiService {
 
   ApiService({required this.baseUrl});
 
-  Future<String> getResponseFromApi(String query) async {
-    // Get the current user's UID from Firebase Authentication
-    User? currentUser = FirebaseAuth.instance.currentUser;
-
-    if (currentUser == null) {
-      throw Exception('No user is currently signed in');
-    }
-
-    String userId = currentUser.uid;  // Get the UID of the current user
-
+  Future<String> getResponseFromApi(String query, String isWeekly, {String? startDate}) async {
     final response = await http.post(
       Uri.parse('$baseUrl/query'),
       headers: {'Content-Type': 'application/json'},
-      body: json.encode({
+      body: jsonEncode({
         'query': query,
-        'user_id': userId,  // Send the user ID in the request
+        'user_id': FirebaseAuth.instance.currentUser?.uid,
+        'isWeekly': isWeekly.toString(),
+        'start_date': startDate, // Include the start_date parameter
       }),
     );
 

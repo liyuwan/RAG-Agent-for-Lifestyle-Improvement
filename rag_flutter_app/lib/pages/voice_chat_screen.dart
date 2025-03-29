@@ -113,7 +113,7 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> with SingleTickerProv
     await Future.delayed(const Duration(milliseconds: 100));
 
     try {
-      String apiResponse = await _apiService.getResponseFromApi(query);
+      String apiResponse = await _apiService.getResponseFromApi(query, "true");
 
       setState(() {
         _response = apiResponse;

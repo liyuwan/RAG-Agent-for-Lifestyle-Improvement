@@ -46,7 +46,7 @@ class _ChatPageState extends State<ChatPage> {
     _scrollToBottom();
 
     try {
-      await apiService.getResponseFromApi(query);
+      await apiService.getResponseFromApi(query, "true");
       setState(() {
         _pendingMessages.removeWhere((msg) => msg['sender'] == 'user' && msg['text'] == query);
         _pendingMessages.removeWhere((msg) => msg['sender'] == 'bot' && msg['isPending'] == true);

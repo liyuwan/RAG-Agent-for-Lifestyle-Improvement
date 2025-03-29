@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'package:intl/intl.dart';
 import '../widgets/settings_button.dart';
 import '/services/globals.dart'; // Import the globals file for isDarkMode
+import '/services/api_service.dart'; // Import the ApiService class
 
 class MealsPlanPage extends StatefulWidget {
   const MealsPlanPage({super.key});
@@ -19,6 +20,8 @@ class _MealsPlanPageState extends State<MealsPlanPage> {
   int _totalCalories = 0;
   int caloriesConsumed = 0;
   Map<String, bool> _completedMeals = {};
+  bool isGenerating = false;
+  ApiService apiService = ApiService(baseUrl: 'http://127.0.0.1:5000');
 
   @override
   void initState() {
@@ -73,9 +76,10 @@ class _MealsPlanPageState extends State<MealsPlanPage> {
     return FirebaseFirestore.instance
         .collection('users')
         .doc(user.uid)
-        .collection('meal_plans') // Changed from 'plans' to 'meal_plans'
+        .collection('meal_plans')
         .where('target_date', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
         .where('target_date', isLessThanOrEqualTo: Timestamp.fromDate(endOfDay))
+        .orderBy('date', descending: true)
         .orderBy('target_date', descending: true)
         .limit(1)
         .snapshots();
@@ -270,6 +274,48 @@ class _MealsPlanPageState extends State<MealsPlanPage> {
     }
   }
 
+  Widget buildMealsPlanGenerateButton(buttonText, isWeekly) {
+    return ElevatedButton(
+      onPressed: isGenerating
+          ? null // Disable button when Generating
+          : () async {
+              setState(() => isGenerating = true);
+              try {
+                // Pass the selected date as the start_date parameter
+                await apiService.getResponseFromApi(
+                  "Update my meals plan",
+                  isWeekly,
+                  startDate: DateFormat('yyyy-MM-dd').format(selectedDate),
+                );
+              } finally {
+                setState(() => isGenerating = false);
+              }
+            },
+      style: ElevatedButton.styleFrom(
+        backgroundColor: isDarkMode.value ? Colors.grey[850] : Colors.teal[400],
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+      ),
+      child: isGenerating
+          ? SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                color: Colors.white,
+                strokeWidth: 2,
+              ),
+            )
+          : Text(buttonText,
+              style: TextStyle(
+                fontWeight: FontWeight.w500,
+                color: Colors.white,
+              )),
+    );
+  }
+
+
   Widget _buildMealCard(String title, dynamic data, IconData icon) {
     if (data == null) return SizedBox.shrink();
 
@@ -400,6 +446,9 @@ class _MealsPlanPageState extends State<MealsPlanPage> {
   @override
   Widget build(BuildContext context) {
     double screenHeight = MediaQuery.of(context).size.height;// Declare totalCalories here
+    bool isCurrentDay = selectedDate.day == DateTime.now().day &&
+                        selectedDate.month == DateTime.now().month &&
+                        selectedDate.year == DateTime.now().year;
 
     return ValueListenableBuilder<bool>(
       valueListenable: isDarkMode,
@@ -492,17 +541,38 @@ class _MealsPlanPageState extends State<MealsPlanPage> {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return Center(child: CircularProgressIndicator());
                     }
-                    if (snapshot.hasError ||
-                        !snapshot.hasData ||
-                        snapshot.data!.docs.isEmpty) {
-                      return Center(
-                        child: Text(
-                          "No meal plans found",
-                          style: TextStyle(
-                            color: darkMode ? Colors.white : Colors.black,
+                    if (snapshot.hasError || !snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                      // Check if the selected date meets the conditions
+                      final now = DateTime.now();
+                      final isWithinOneWeek = selectedDate.isAfter(now) && selectedDate.difference(now).inDays <= 7;
+
+                      if (isWithinOneWeek) {
+                        return Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                "No meal plans found",
+                                style: TextStyle(
+                                  color: darkMode ? Colors.white : Colors.black,
+                                ),
+                              ),
+                              const SizedBox(height: 20),
+                              buildMealsPlanGenerateButton("Generate a meals plan", "true"),
+                              const SizedBox(height: 60),
+                            ],
                           ),
-                        ),
-                      );
+                        );
+                      } else {
+                        return Center(
+                          child: Text(
+                            "No meal plans available for the selected date",
+                            style: TextStyle(
+                              color: darkMode ? Colors.white : Colors.black,
+                            ),
+                          ),
+                        );
+                      }
                     }
                     try {
                       final mealPlan =
@@ -523,6 +593,16 @@ class _MealsPlanPageState extends State<MealsPlanPage> {
                       return ListView(
                         padding: EdgeInsets.all(10),
                         children: [
+                          if (isCurrentDay)
+                            Padding(
+                              padding: const EdgeInsets.only(right: 15, top: 15),
+                              child: Row(
+                                children: [
+                                  const Spacer(),
+                                  buildMealsPlanGenerateButton("Update", "false")
+                                ],
+                              ),
+                            ),
                           _buildMealCard("Breakfast", content['breakfast'],
                               Icons.free_breakfast_outlined),
                           _buildMealCard(

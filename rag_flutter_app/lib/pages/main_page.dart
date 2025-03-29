@@ -82,13 +82,13 @@ class _MainPageState extends State<MainPage> {
       child: CircleAvatar(
         radius: 28,
         backgroundColor: _selectedIndex == index
-            ? (darkMode ? Colors.white : const Color(0xFF81C0C0))
+            ? Colors.white
             : (darkMode ? Colors.grey[700] : const Color(0xFF81C0C0)),
         child: Icon(
           icon,
           size: 30,
           color: _selectedIndex == index
-              ? (darkMode ? Colors.black : Colors.white)
+              ? (darkMode ? Colors.black : const Color(0xFF008080))
               : (darkMode ? Colors.white70 : const Color(0xFF008080)),
         ),
       ),
@@ -103,7 +103,7 @@ class _MainPageState extends State<MainPage> {
       child: CircleAvatar(
         radius: 28,
         backgroundColor: _selectedIndex == index
-            ? (darkMode ? Colors.white : const Color(0xFF81C0C0))
+            ? Colors.white
             : (darkMode ? Colors.grey[700] : const Color(0xFF81C0C0)),
         child: Transform.rotate(
           angle: 3.14 / 2, // Rotate 90 degrees (π/2 radians)
@@ -112,7 +112,7 @@ class _MainPageState extends State<MainPage> {
             width: 30,
             height: 30,
             color: _selectedIndex == index
-                ? (darkMode ? Colors.black : Colors.white)
+                ? (darkMode ? Colors.black : const Color(0xFF008080))
                 : (darkMode ? Colors.white70 : const Color(0xFF008080)),
           ),
         ),

@@ -71,7 +71,7 @@ def classify_intent(query):
     result = intent_classifier(query, candidate_labels)
     return result['labels'][0]
 
-def call_rag_agent(query, userId):
+def call_rag_agent(query, userId, isWeekly, start_date=None):
     intent = classify_intent(query)
     
     is_meal_plan = intent == "generate meal plan"
@@ -144,7 +144,7 @@ def call_rag_agent(query, userId):
                 context_info = "Nutrition data unavailable."
 
             messages.append(generate_and_save_meal_plan(
-                userId, query, SYSTEM_PROMPT, biometric_info, context_info
+                userId, query, SYSTEM_PROMPT, biometric_info, context_info, isWeekly, start_date
             ))
 
         # Handle workout plan with original retrieval
@@ -164,7 +164,7 @@ def call_rag_agent(query, userId):
                 context_info = "Workout data unavailable."
 
             messages.append(generate_and_save_workout_plan(
-                userId, query, SYSTEM_PROMPT, biometric_info, context_info
+                userId, query, SYSTEM_PROMPT, biometric_info, context_info, isWeekly, start_date
             ))
 
         final_message = "\n".join(messages)
