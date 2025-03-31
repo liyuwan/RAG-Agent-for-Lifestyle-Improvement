@@ -587,7 +587,7 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
                           width: double.infinity,
                           child: Image.asset(
                             'assets/workoutplan-banner.png', // Image path
-                            fit: BoxFit.none, // Ensures full width without cropping
+                            fit: BoxFit.cover, // Ensures full width without cropping
                             alignment:
                                 Alignment.topCenter, // Aligns the image from the top
                           ),
