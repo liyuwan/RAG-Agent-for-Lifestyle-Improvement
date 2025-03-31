@@ -545,8 +545,11 @@ class _MealsPlanPageState extends State<MealsPlanPage> {
                       // Check if the selected date meets the conditions
                       final now = DateTime.now();
                       final isWithinOneWeek = selectedDate.isAfter(now) && selectedDate.difference(now).inDays <= 7;
+                      final isCurrentDay = selectedDate.day == now.day &&
+                        selectedDate.month == now.month &&
+                        selectedDate.year == now.year;
 
-                      if (isWithinOneWeek) {
+                      if (isWithinOneWeek || isCurrentDay) {
                         return Center(
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
