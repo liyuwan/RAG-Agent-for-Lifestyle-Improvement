@@ -1,7 +1,7 @@
 from firestore_memory import FirestoreMemory
 from helpers import extract_json_from_response, get_user_biometric_data
 from plan_generation import generate_and_save_meal_plan, generate_and_save_workout_plan
-from llm_setup import qa_chain
+from llm_setup import llm
 from config import *
 import logging
 from transformers import pipeline
@@ -55,10 +55,10 @@ def generate_nutrient_targets(biometric_data):
         "\nINCLUDE ONLY JSON!"
     )
     try:
-        response = qa_chain.invoke(nutrient_prompt)
+        response = llm.invoke(nutrient_prompt).content
         # DEBUG: Log raw LLM response for nutrient targets
-        logging.debug(f"Raw LLM response for nutrient targets: {response['result']}\n\n")
-        parsed_targets = extract_json_from_response(response['result'])
+        logging.debug(f"Raw LLM response for nutrient targets: {response}\n\n")
+        parsed_targets = extract_json_from_response(response)
         # DEBUG: Log parsed nutrient targets
         logging.debug(f"Parsed nutrient targets: {parsed_targets}\n\n\n\n\n")
         return parsed_targets
@@ -116,7 +116,7 @@ def call_rag_agent(query, userId, isWeekly, start_date=None):
                 f"- Calories: {nutrient_targets['calories']} ±10%\n"
                 f"- Protein: {nutrient_targets['protein_g']['target']}g ±15%\n"
                 f"FILTER BY:\n"
-                f"- Food category: {biometric_data.get('preferenceFood', 'general')}\n"
+                f"- Preference Food category: {biometric_data.get('preferenceFood', 'general')}\n"
                 f"- Exclude allergens: {biometric_data.get('foodAllergies', 'none')}\n"
                 f"PRIORITIZE items with:\n"
                 f"- Complete protein sources\n"
@@ -129,42 +129,28 @@ def call_rag_agent(query, userId, isWeekly, start_date=None):
             
             # Retrieve relevant food items
             try:
-                retrieved_docs = qa_chain.retriever.invoke(nutrient_query)
+                food_items = llm.invoke(nutrient_query).content
                 
                 # DEBUG: Log retrieved food items from vector store
-                logging.debug(f"Retrieved food items for nutrient query: {[doc.page_content for doc in retrieved_docs]}\n\n\n\n\n")
+                logging.debug(f"Retrieved food items for nutrient query: {food_items}\n\n\n\n\n")
                 
-                context_info = (
-                    "Nutritional Context:\n" + 
-                    "\n".join([doc.page_content for doc in retrieved_docs[:5]]) + 
+                food_menu = (
+                    "Food Items:\n" + 
+                    f"{food_items}\n" + 
                     f"\n\nDaily Targets: {nutrient_query}"
-                ) if retrieved_docs else "No relevant food items found."
+                ) if food_items else "No relevant food items found."
             except Exception as e:
-                print(f"Nutrition retrieval error: {e}")
-                context_info = "Nutrition data unavailable."
+                print(f"Food items generation error: {e}")
+                food_menu = "Failed to generate food items."
 
             messages.append(generate_and_save_meal_plan(
-                userId, query, SYSTEM_PROMPT, biometric_info, context_info, isWeekly, start_date
+                userId, query, SYSTEM_PROMPT, biometric_info, food_menu, isWeekly, start_date
             ))
 
         # Handle workout plan with original retrieval
         if is_workout_plan:
-            try:
-                retrieved_docs = qa_chain.retriever.invoke(query)
-                
-                # DEBUG: Log retrieved documents for workout query
-                logging.debug(f"Retrieved documents for workout query: {[doc.page_content for doc in retrieved_docs]}")
-                
-                context_info = (
-                    "Exercise Context:\n" + 
-                    "\n".join([doc.page_content for doc in retrieved_docs[:3]])
-                ) if retrieved_docs else "No relevant exercise data."
-            except Exception as e:
-                print(f"Workout retrieval error: {e}")
-                context_info = "Workout data unavailable."
-
             messages.append(generate_and_save_workout_plan(
-                userId, query, SYSTEM_PROMPT, biometric_info, context_info, isWeekly, start_date
+                userId, query, SYSTEM_PROMPT, biometric_info, isWeekly, start_date
             ))
 
         final_message = "\n".join(messages)
@@ -209,11 +195,11 @@ def call_rag_agent(query, userId, isWeekly, start_date=None):
             # DEBUG: Log prompt for general question
             logging.debug(f"Prompt for general question: {prompt}")
             
-            response = qa_chain.invoke(prompt)
+            response = llm.invoke(prompt).content
             
             # DEBUG: Log raw LLM response for general question
-            logging.debug(f"Raw LLM response for general question: {response['result']}")
-            final_response = response['result'].rstrip('\n')
+            logging.debug(f"Raw LLM response for general question: {response}")
+            final_response = response.rstrip('\n')
             memory.append_to_history(query, final_response)
             return final_response
         except Exception as e:

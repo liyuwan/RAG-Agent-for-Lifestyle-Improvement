@@ -7,10 +7,9 @@ from gtts import gTTS
 import speech_recognition as sr
 from firebase_admin import firestore
 from config import db
-import logging
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 from google.api_core.exceptions import ResourceExhausted
-from llm_setup import structured_llm
+from llm_setup import llm
 
 def speak_text(text):
     try:
@@ -107,7 +106,7 @@ def get_user_biometric_data(user_id):
     stop=stop_after_attempt(5)
 )
 def invoke_llm_with_retry(prompt):
-    return structured_llm.invoke(prompt).content.rstrip('\n')
+    return llm.invoke(prompt).content.rstrip('\n')
 
 def extract_json_from_response(text):
     try:

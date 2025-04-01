@@ -3,7 +3,6 @@ import json
 import logging
 from datetime import datetime, timedelta
 from helpers import invoke_llm_with_retry, extract_json_from_response, save_plan_to_firestore
-from google.cloud import firestore
 
 def generate_nutrient_context(targets):
     return (
@@ -15,17 +14,22 @@ def generate_nutrient_context(targets):
         "Select foods from the following options:\n"
     )
 
-def generate_and_save_meal_plan(userId, query, SYSTEM_PROMPT, biometric_info, context_info, isWeekly, start_date=None):
+def generate_and_save_meal_plan(userId, query, SYSTEM_PROMPT, biometric_info, food_menu, isWeekly, start_date=None):
     meal_instructions = (
-        "Create a varied meal plan using the food items provided in the context, following these rules:\n"
-        "1. Use ONLY 2 servings MAXIMUM of any single food item per day across all meals combined (e.g., an item can appear in one meal once and another meal once, but never three times total).\n"
-        "2. Include different protein sources in each meal (e.g., beef in one, chicken in another).\n"
-        "3. Ensure vegetables or fruits are included in at least 2 meals.\n"
-        "4. Total daily calories must match the nutritional targets.\n"
-        "5. Never repeat the exact same combination of food items across multiple meals.\n"
-        "6. Avoid listing the same food item multiple times within a single meal unless necessary to meet nutritional targets—prioritize variety.\n\n"
-        "Each entry in 'food_items' represents one serving. Select foods from the provided context below.\n\n"
-        "Format as JSON:\n"
+        "Create a balanced meal plan using the food items provided, following these rules:\n"
+        "1. Use MAX 2 servings of any single food item per day across all meals (e.g., item can appear twice total).\n"
+        "2. Include different WHOLE FOOD protein sources in each meal (e.g., chicken, eggs, legumes) - limit protein bars/shakes to 1 serving daily.\n"
+        "3. Include VEGETABLES in at least 2 meals (fruit smoothies don't count as vegetables).\n"
+        "4. Ensure each meal contains balanced macros: 20-35% protein, 30-50% carbs, 15-35% fats.\n"
+        "5. Total daily calories must match nutritional targets (±5%). Verify meal sums mathematically.\n"
+        "6. Never repeat exact food combinations across meals - prioritize diverse ingredients.\n"
+        "7. Avoid processed snacks as main meal components - use only as supplements if needed.\n\n"
+        "Nutritional Guidelines:\n"
+        "- Breakfast: 400-600 calories\n"
+        "- Lunch: 500-700 calories\n"
+        "- Dinner: 500-700 calories\n"
+        "- Total Daily: 1500-2000 calories\n\n"
+        "Format as JSON with per-meal nutrition and verification section:\n"
         "{\n"
         "  \"breakfast\": {\n"
         "    \"food_items\": [\"item1\", \"item2\"],\n"
@@ -37,15 +41,19 @@ def generate_and_save_meal_plan(userId, query, SYSTEM_PROMPT, biometric_info, co
         "  \"lunch\": {...},\n"
         "  \"dinner\": {...},\n"
         "  \"total_daily\": {\n"
-        "    \"calories\": number,\n"
-        "    \"protein_g\": number,\n"
-        "    \"carbs_g\": number,\n"
-        "    \"fats_g\": number\n"
+        "    \"calories\": SUM(meals),\n"
+        "    \"protein_g\": SUM(meals),\n"
+        "    \"carbs_g\": SUM(meals),\n"
+        "    \"fats_g\": SUM(meals)\n"
+        "  },\n"
+        "  \"verification\": {\n"
+        "    \"max_serving_check\": bool,\n"
+        "    \"vegetable_inclusion\": bool,\n"
+        "    \"protein_variety_check\": bool\n"
         "  }\n"
         "}\n"
-        "INCLUDE ONLY JSON! ADD NUTRITION BREAKDOWN PER MEAL!"
+        "INCLUDE ONLY JSON! DOUBLE-CHECK CALORIE MATH!"
     )
-    
     weekly_meal_plans = []
     # Use the provided start_date or default to today
     start_date = start_date or datetime.now().date()
@@ -57,7 +65,7 @@ def generate_and_save_meal_plan(userId, query, SYSTEM_PROMPT, biometric_info, co
             f"System Instructions:\n{SYSTEM_PROMPT}\n\n"
             f"Given the following context and user information, generate a meal plan in JSON format as instructed.\n\n"
             f"User Information:\n{biometric_info}\n"
-            f"Relevant Context:\n{context_info}\n"
+            f"Food menu:\n{food_menu}\n"
             f"User Query: {query}\n\n"
             f"{meal_instructions}"
         )
@@ -91,7 +99,7 @@ def generate_and_save_meal_plan(userId, query, SYSTEM_PROMPT, biometric_info, co
     else:
         return "Error generating weekly meal plan. Please try again."
 
-def generate_and_save_workout_plan(userId, query, SYSTEM_PROMPT, biometric_info, context_info, isWeekly, start_date=None):
+def generate_and_save_workout_plan(userId, query, SYSTEM_PROMPT, biometric_info, isWeekly, start_date=None):
     workout_instructions = (
         "Please generate a workout plan in JSON format using the following format:\n\n"
         '''[
@@ -114,7 +122,6 @@ def generate_and_save_workout_plan(userId, query, SYSTEM_PROMPT, biometric_info,
             f"System Instructions:\n{SYSTEM_PROMPT}\n\n"
             f"Given the following context and user information, generate a workout plan in JSON format as instructed.\n\n"
             f"User Information:\n{biometric_info}\n"
-            f"Relevant Context:\n{context_info}\n"
             f"User Query: {query}\n\n"
             f"{workout_instructions}"
         )

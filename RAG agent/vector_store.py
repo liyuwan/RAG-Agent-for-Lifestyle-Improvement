@@ -1,3 +1,6 @@
+# Later to remove (not gonna use this)
+
+
 # vector_store.py
 import os
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
