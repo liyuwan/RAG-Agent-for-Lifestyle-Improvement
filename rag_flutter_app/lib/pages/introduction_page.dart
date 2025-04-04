@@ -6,6 +6,9 @@ class IntroductionPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
+
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
@@ -17,31 +20,38 @@ class IntroductionPage extends StatelessWidget {
           ),
         ),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 80),
+          padding: EdgeInsets.symmetric(
+            horizontal: screenWidth * 0.08, // 8% of screen width
+            vertical: screenHeight * 0.05,  // 10% of screen height
+          ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              SizedBox(height: 50,),
+              SizedBox(height: screenHeight * 0.05), // 6% of screen height
               Image.asset(
-                'assets/logo.png', // Ensure the logo is placed in the `assets` directory
-                height: 210,
+                'assets/logo.png',
+                height: screenHeight * 0.25, // 25% of screen height
               ),
-              const SizedBox(height: 40),
-              const Text(
+              SizedBox(height: screenHeight * 0.05), // 5% of screen height
+              Text(
                 'Welcome to your intelligent lifestyle assistant!',
                 textAlign: TextAlign.start,
                 style: TextStyle(
-                  fontSize: 29,
+                  fontSize: screenWidth * 0.06, // 7% of screen width
                   fontWeight: FontWeight.w700,
                   color: Colors.black,
                   height: 1.2,
                 ),
               ),
-              const SizedBox(height: 40),
-              const Text(
+              SizedBox(height: screenHeight * 0.05), // 5% of screen height
+              Text(
                 'Discover personalized advice, streamlined nutrition planning, and optimized workouts – all in one place',
                 textAlign: TextAlign.start,
-                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: Color(0xFF076060)),
+                style: TextStyle(
+                  fontSize: screenWidth * 0.04, // 4.5% of screen width
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF076060),
+                ),
               ),
               Spacer(),
               ElevatedButton(
@@ -56,9 +66,13 @@ class IntroductionPage extends StatelessWidget {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(50),
                   ),
-                  padding: const EdgeInsets.all(20),
+                  padding: EdgeInsets.all(screenWidth * 0.05), // 5% of screen width
                 ),
-                child: Icon(Icons.arrow_forward_rounded, size: 40, color: Color(0xFF004163),),
+                child: Icon(
+                  Icons.arrow_forward_rounded,
+                  size: screenWidth * 0.1, // 10% of screen width
+                  color: Color(0xFF004163),
+                ),
               ),
             ],
           ),

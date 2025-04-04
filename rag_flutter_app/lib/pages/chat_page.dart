@@ -81,6 +81,9 @@ class _ChatPageState extends State<ChatPage> {
   @override
   Widget build(BuildContext context) {
     final currentUser = FirebaseAuth.instance.currentUser;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+
     if (currentUser == null) {
       return Scaffold(
         body: Center(child: Text('Please log in to use the chat')),
@@ -102,7 +105,7 @@ class _ChatPageState extends State<ChatPage> {
                   'AI Chat',
                   style: TextStyle(
                     color: darkMode ? Colors.white : Colors.black,
-                    fontSize: 22,
+                    fontSize: screenWidth * 0.05,
                     fontWeight: FontWeight.w400,
                   ),
                 ),
@@ -213,7 +216,7 @@ class _ChatPageState extends State<ChatPage> {
                                           color: darkMode
                                               ? Colors.white70
                                               : Colors.black,
-                                          fontSize: 16,
+                                          fontSize: screenWidth * 0.04,
                                           fontStyle: FontStyle.italic,
                                         ),
                                       ),
@@ -227,7 +230,7 @@ class _ChatPageState extends State<ChatPage> {
                                           : (darkMode
                                               ? Colors.white70
                                               : Colors.black),
-                                      fontSize: 16,
+                                      fontSize: screenWidth * 0.04,
                                     ),
                                     softWrap: true,
                                   ),
@@ -239,8 +242,12 @@ class _ChatPageState extends State<ChatPage> {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.only(
-                    left: 10.0, right: 15.0, top: 10.0, bottom: 35.0),
+                padding: EdgeInsets.only(
+                  left: screenWidth * 0.025,  // 2.5% of screen width
+                  right: screenWidth * 0.04,  // 4% of screen width
+                  top: screenHeight * 0.015,  // 1.5% of screen height
+                  bottom: screenHeight * 0.025, // 5% of screen height
+                ),
                 child: Row(
                   children: [
                     IconButton(
@@ -305,8 +312,8 @@ class _ChatPageState extends State<ChatPage> {
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(25),
                           ),
-                          contentPadding: const EdgeInsets.symmetric(
-                              vertical: 10, horizontal: 16),
+                          contentPadding: EdgeInsets.symmetric(
+                              vertical: screenHeight * 0.02, horizontal: screenWidth * 0.04),
                           filled: true,
                           fillColor:
                               darkMode ? Colors.grey[800] : Colors.white,

@@ -193,6 +193,9 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> with SingleTickerProv
 
   @override
   Widget build(BuildContext context) {
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final double screenHeight = MediaQuery.of(context).size.height;
+
     return ValueListenableBuilder<bool>(
       valueListenable: isDarkMode,
       builder: (context, darkMode, child) {
@@ -204,7 +207,7 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> with SingleTickerProv
             iconTheme: IconThemeData(color: darkMode ? Colors.grey : Colors.black),
             titleTextStyle: TextStyle(
               color: darkMode ? Colors.white : Colors.black,
-              fontSize: 22,
+              fontSize: screenWidth * 0.055, // 5.5% of screen width
               fontWeight: FontWeight.w400,
             ),
           ),
@@ -212,6 +215,7 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> with SingleTickerProv
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                // Animated Robot Image
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 500),
                   decoration: BoxDecoration(
@@ -223,34 +227,35 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> with SingleTickerProv
                             : (darkMode
                                 ? Colors.tealAccent.withOpacity(0.5)
                                 : const Color(0xFF66B2B2).withOpacity(0.5)),
-                        blurRadius: 30,
-                        offset: const Offset(0, 10),
+                        blurRadius: screenWidth * 0.055, // 8% of screen width
+                        offset: Offset(0, screenHeight * 0.01), // 1% of screen height
                       ),
                     ],
                   ),
                   child: ClipOval(
                     child: Image.asset(
                       'assets/robot.jpg',
-                      width: 250,
-                      height: 250,
+                      width: screenWidth * 0.6, // 60% of screen width
+                      height: screenWidth * 0.6, // 60% of screen width
                       fit: BoxFit.cover,
                     ),
                   ),
                 ),
-                const SizedBox(height: 40),
+                SizedBox(height: screenHeight * 0.05), // 5% of screen height
+                // Display Text Container
                 Container(
-                  width: MediaQuery.of(context).size.width * 0.85,
-                  height: 200,
-                  padding: const EdgeInsets.all(20.0),
+                  width: screenWidth * 0.85, // 85% of screen width
+                  height: screenHeight * 0.25, // 25% of screen height
+                  padding: EdgeInsets.all(screenWidth * 0.05), // 5% of screen width
                   decoration: BoxDecoration(
                     color: Colors.transparent,
-                    borderRadius: BorderRadius.circular(15),
+                    borderRadius: BorderRadius.circular(screenWidth * 0.04), // 4% of screen width
                   ),
                   child: SingleChildScrollView(
                     child: Text(
                       _currentChunk.isNotEmpty ? _currentChunk : _displayText,
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: screenWidth * 0.04, // 4% of screen width
                         fontWeight: FontWeight.w500,
                         color: darkMode ? Colors.white70 : Colors.black,
                       ),
@@ -258,7 +263,8 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> with SingleTickerProv
                     ),
                   ),
                 ),
-                const SizedBox(height: 30),
+                SizedBox(height: screenHeight * 0.04), // 4% of screen height
+                // Microphone Button
                 GestureDetector(
                   onTap: () {
                     if (_isListening) {
@@ -284,8 +290,8 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> with SingleTickerProv
                                 child: Opacity(
                                   opacity: opacity,
                                   child: Container(
-                                    width: 100,
-                                    height: 100,
+                                    width: screenWidth * 0.25, // 25% of screen width
+                                    height: screenWidth * 0.25, // 25% of screen width
                                     decoration: BoxDecoration(
                                       shape: BoxShape.circle,
                                       color: Colors.red.withOpacity(0.2),
@@ -297,14 +303,14 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> with SingleTickerProv
                           );
                         }),
                       CircleAvatar(
-                        radius: 50,
+                        radius: screenWidth * 0.13, // 13% of screen width
                         backgroundColor: _isListening
                             ? Colors.red
                             : (darkMode ? Colors.grey[700] : const Color(0xFF66B2B2)),
-                        child: const Icon(
+                        child: Icon(
                           Icons.mic,
                           color: Colors.white,
-                          size: 40,
+                          size: screenWidth * 0.08, // 8% of screen width
                         ),
                       ),
                     ],

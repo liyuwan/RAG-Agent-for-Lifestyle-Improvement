@@ -410,7 +410,7 @@ class _ProgressPageState extends State<ProgressPage> {
               Text(
                 'Your Achievements',
                 style: TextStyle(
-                    fontSize: 15.0,
+                    fontSize: 14.0,
                     fontWeight: FontWeight.bold,
                     color: Colors.white),
               ),
@@ -475,7 +475,7 @@ class _ProgressPageState extends State<ProgressPage> {
       child: Text(
         dailyQuote,
         style: TextStyle(
-            fontSize: 13.0,
+            fontSize: 12.0,
             fontWeight: FontWeight.w700,
             fontStyle: FontStyle.italic,
             color: isDarkMode.value ? Colors.white : Colors.black),
@@ -758,6 +758,7 @@ class _ProgressPageState extends State<ProgressPage> {
   @override
   Widget build(BuildContext context) {
     String todayDate = DateFormat('MMMM dd, yyyy').format(DateTime.now());
+    double screenWidth = MediaQuery.of(context).size.width;
 
     return ValueListenableBuilder<bool>(
       valueListenable: isDarkMode,
@@ -805,7 +806,7 @@ class _ProgressPageState extends State<ProgressPage> {
                         Text(
                           "Calories Overview",
                           style: TextStyle(
-                              fontSize: 16.0,
+                              fontSize: screenWidth * 0.03,
                               fontWeight: FontWeight.w600,
                               color: darkMode ? Colors.white : Colors.black),
                         ),
@@ -830,7 +831,7 @@ class _ProgressPageState extends State<ProgressPage> {
                         Text(
                           "Exercise Completion Overview",
                           style: TextStyle(
-                              fontSize: 16.0,
+                              fontSize: screenWidth * 0.03,
                               fontWeight: FontWeight.w600,
                               color: darkMode ? Colors.white : Colors.black),
                         ),

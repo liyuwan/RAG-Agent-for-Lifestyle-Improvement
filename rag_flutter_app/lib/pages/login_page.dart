@@ -167,6 +167,7 @@ class _LoginPageState extends State<LoginPage> {
                             ? const CircularProgressIndicator(
                                 color: Color(0xFF008080))
                             : Column(
+                                crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
                                   ElevatedButton(
                                     onPressed:

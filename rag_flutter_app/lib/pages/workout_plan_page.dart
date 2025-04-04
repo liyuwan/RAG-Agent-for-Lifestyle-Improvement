@@ -105,9 +105,11 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
   }
 
   // Build user profile and menu section
-  Widget buildProfileSection() {
+  Widget buildProfileSection(BuildContext context) {
+    final double screenWidth = MediaQuery.of(context).size.width;
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 35),
+      padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.08), // 8% of screen width
       child: Row(
         children: [
           FutureBuilder<DocumentSnapshot>(
@@ -118,21 +120,21 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return CircleAvatar(
-                  radius: 20,
+                  radius: screenWidth * 0.05, // 5% of screen width
                   backgroundColor: Colors.teal[50],
                   child: CircularProgressIndicator(color: Colors.teal),
                 );
               }
               if (snapshot.hasError || !snapshot.hasData || !snapshot.data!.exists) {
                 return CircleAvatar(
-                  radius: 20,
+                  radius: screenWidth * 0.05, // 5% of screen width
                   backgroundColor: Colors.teal[50],
                   backgroundImage: AssetImage("assets/default_profile.png"),
                 );
               }
               String? profileImageUrl = snapshot.data!['profileImage'];
               return CircleAvatar(
-                radius: 20,
+                radius: screenWidth * 0.05, // 5% of screen width
                 backgroundColor: Colors.teal[50],
                 backgroundImage: profileImageUrl != null && profileImageUrl.isNotEmpty
                     ? AssetImage(profileImageUrl)
@@ -140,11 +142,11 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
               );
             },
           ),
-          SizedBox(width: 15),
+          SizedBox(width: screenWidth * 0.03), // 3% of screen width
           Text(
             "Welcome back,\n$username", // Display the username here
             style: TextStyle(
-              fontSize: 14,
+              fontSize: screenWidth * 0.035, // 4% of screen width
               fontWeight: FontWeight.w600,
               color: isDarkMode.value ? Colors.white : Colors.black,
             ),
@@ -156,7 +158,10 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
     );
   }
 
-  Widget buildCalendar() {
+  Widget buildCalendar(BuildContext context) {
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final double screenHeight = MediaQuery.of(context).size.height;
+
     // Calculate the first and last day of the current month
     DateTime now = DateTime.now();
     DateTime firstDayOfCurrentMonth = DateTime(now.year, now.month, 1);
@@ -174,107 +179,110 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
         ? selectedDate.day - 1
         : lastDayOfCurrentMonth.day + selectedDate.day - 1;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 30),
-          child: SizedBox(
-            height: 90, // Increased height to accommodate the month text
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: totalDays,
-              controller: ScrollController(
-                initialScrollOffset: (todayIndex * 50).toDouble() - MediaQuery.of(context).size.width / 2 + 25,
-              ),
-              itemBuilder: (context, index) {
-                DateTime date;
-                if (index < lastDayOfCurrentMonth.day) {
-                  date = firstDayOfCurrentMonth.add(Duration(days: index));
-                } else {
-                  date = firstDayOfNextMonth.add(Duration(days: index - lastDayOfCurrentMonth.day));
-                }
-
-                bool isSelected = date.day == selectedDate.day && date.month == selectedDate.month && date.year == selectedDate.year;
-                bool isToday = date.day == DateTime.now().day && date.month == DateTime.now().month && date.year == DateTime.now().year;
-
-                return GestureDetector(
-                  onTap: () => onDateSelected(date),
-                  child: Container(
-                    width: 60,
-                    margin: const EdgeInsets.symmetric(horizontal: 4),
-                    decoration: BoxDecoration(
-                      color: isSelected ? (isDarkMode.value ? Colors.white30 : Colors.white) : Colors.transparent,
-                      borderRadius: BorderRadius.circular(28), // Increased border radius
-                    ),
-                    alignment: Alignment.center,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          DateFormat.MMM().format(date), // Short month name
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: isSelected ? (isDarkMode.value ? Colors.tealAccent : Colors.teal) : (isToday ? Colors.deepOrange[300] : (isDarkMode.value ? Colors.grey : Colors.black)),
-                          ),
-                        ),
-                        Text(
-                          "${date.day}",
-                          style: TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w600,
-                            color: isSelected ?  (isDarkMode.value ? Colors.tealAccent : Colors.teal) : (isToday ? Colors.deepOrange[400] : (isDarkMode.value ? Colors.grey : Colors.black)),
-                          ),
-                        ),
-                        Text(
-                          DateFormat.E().format(date), // Short day name
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: isSelected ?  (isDarkMode.value ? Colors.tealAccent : Colors.teal) : (isToday ? Colors.deepOrange[300] : (isDarkMode.value ? Colors.grey : Colors.black)),
-                          ),
-                        ),
-                        if (isSelected)
-                          Container(
-                            margin: const EdgeInsets.only(top: 4),
-                            width: 6,
-                            height: 6,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.teal[200],
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.06), // 6% of screen width
+      child: SizedBox(
+        height: screenHeight * 0.11, // 11% of screen height
+        child: ListView.builder(
+          scrollDirection: Axis.horizontal,
+          itemCount: totalDays,
+          controller: ScrollController(
+            initialScrollOffset: (todayIndex * screenWidth * 0.12) - screenWidth / 2 + screenWidth * 0.06,
           ),
+          itemBuilder: (context, index) {
+            DateTime date;
+            if (index < lastDayOfCurrentMonth.day) {
+              date = firstDayOfCurrentMonth.add(Duration(days: index));
+            } else {
+              date = firstDayOfNextMonth.add(Duration(days: index - lastDayOfCurrentMonth.day));
+            }
+
+            bool isSelected = date.day == selectedDate.day && date.month == selectedDate.month && date.year == selectedDate.year;
+            bool isToday = date.day == DateTime.now().day && date.month == DateTime.now().month && date.year == DateTime.now().year;
+
+            return GestureDetector(
+              onTap: () => onDateSelected(date),
+              child: Container(
+                width: screenWidth * 0.15, // 14% of screen width
+                height: screenHeight * 0.1, // 10% of screen height
+                margin: EdgeInsets.symmetric(horizontal: screenWidth * 0.01), // 1% of screen width
+                decoration: BoxDecoration(
+                  color: isSelected ? (isDarkMode.value ? Colors.white30 : Colors.white) : Colors.transparent,
+                  borderRadius: BorderRadius.circular(screenWidth * 0.07), // 7% of screen width
+                ),
+                alignment: Alignment.center,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      DateFormat.MMM().format(date), // Short month name
+                      style: TextStyle(
+                        fontSize: screenWidth * 0.03, // 3% of screen width
+                        color: isSelected
+                            ? (isDarkMode.value ? Colors.tealAccent : Colors.teal)
+                            : (isToday ? Colors.deepOrange[300] : (isDarkMode.value ? Colors.grey : Colors.black)),
+                      ),
+                    ),
+                    Text(
+                      "${date.day}",
+                      style: TextStyle(
+                        fontSize: screenWidth * 0.04, // 4% of screen width
+                        fontWeight: FontWeight.w600,
+                        color: isSelected
+                            ? (isDarkMode.value ? Colors.tealAccent : Colors.teal)
+                            : (isToday ? Colors.deepOrange[400] : (isDarkMode.value ? Colors.grey : Colors.black)),
+                      ),
+                    ),
+                    Text(
+                      DateFormat.E().format(date), // Short day name
+                      style: TextStyle(
+                        fontSize: screenWidth * 0.03, // 3% of screen width
+                        color: isSelected
+                            ? (isDarkMode.value ? Colors.tealAccent : Colors.teal)
+                            : (isToday ? Colors.deepOrange[300] : (isDarkMode.value ? Colors.grey : Colors.black)),
+                      ),
+                    ),
+                    if (isSelected)
+                      Container(
+                        margin: EdgeInsets.only(top: screenHeight * 0.005), // 0.5% of screen height
+                        width: screenWidth * 0.015, // 1.5% of screen width
+                        height: screenHeight * 0.015, // 1.5% of screen width
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.teal[200],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            );
+          },
         ),
-      ],
+      ),
     );
   }
 
-
   // Build the workout level sentence
   Widget buildWorkoutLevel() {
+    final double screenHeight = MediaQuery.of(context).size.height;
+    final double screenWidth = MediaQuery.of(context).size.width;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 10),
+      padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.06, vertical: screenHeight * 0.005), // 2% of screen height
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           // Dumbbell icon
           Image.asset(
             'assets/dumbell.png', // Ensure the image exists in assets folder
-            width: 28, // Adjust size as needed
-            height: 28,
+            width: screenWidth * 0.08, // Adjust size as needed
+            height: screenHeight * 0.08, // Adjust size as needed
             color: Colors.deepOrangeAccent,
           ),
-          const SizedBox(width: 8), // Spacing between icon and text
+          SizedBox(width: screenWidth * 0.01), // Spacing between icon and text
           RichText(
             text: TextSpan(
               style: TextStyle(
-                fontSize: 16,
+                fontSize: screenWidth * 0.04, // 4% of screen width
                 fontWeight: FontWeight.w600,
                 color: isDarkMode.value ? Colors.white : Colors.black,
               ),
@@ -346,7 +354,8 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
       final rawContent = data['content'];
       final content =
           rawContent is String ? jsonDecode(rawContent) : rawContent;
-
+      final double screenWidth = MediaQuery.of(context).size.width;
+      
       return ValueListenableBuilder<bool>(
         valueListenable: isDarkMode,
         builder: (context, darkMode, child) {
@@ -369,7 +378,7 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
                         Text(
                           "Workout Plan",
                           style: TextStyle(
-                            fontSize: 16,
+                            fontSize: screenWidth * 0.045, // 4.5% of screen width
                             fontWeight: FontWeight.w600,
                             color: darkMode ? Colors.white : Colors.black,
                           ),
@@ -397,6 +406,7 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
   }
 
   Widget _buildWorkoutSection(List<dynamic> exercises) {
+    final double screenWidth = MediaQuery.of(context).size.width;
     final List<Map<String, dynamic>> exercisesList = exercises.cast<Map<String, dynamic>>();
     bool isCurrentDay = selectedDate.day == DateTime.now().day &&
                         selectedDate.month == DateTime.now().month &&
@@ -443,7 +453,7 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
                       exercise['exercise'],
                       style: TextStyle(
                         fontWeight: FontWeight.w500,
-                        fontSize: 16,
+                        fontSize: screenWidth * 0.035, // 4% of screen width
                         color: isDarkMode.value ? Colors.white : Colors.black,
                       ),
                     ),
@@ -564,8 +574,8 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
 
   @override
   Widget build(BuildContext context) {
-    double screenHeight = MediaQuery.of(context).size.height;
-
+    final double screenHeight = MediaQuery.of(context).size.height;
+    
     return ValueListenableBuilder<bool>(
       valueListenable: isDarkMode,
       builder: (context, darkMode, child) {
@@ -573,23 +583,23 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
           backgroundColor: darkMode ? Colors.grey[900] : Colors.white,
           body: Column(
             children: [
-              // Section covering 30% of the screen with a background image
+              // Responsive Image Section
               SizedBox(
-                height: screenHeight * 0.25, 
+                height: screenHeight * 0.25, // 25% of screen height
                 child: Stack(
+                  clipBehavior: Clip.none, // Allow content to overflow
                   fit: StackFit.expand,
                   children: [
-                    // Background image (Positioned to align from top)
+                    // Background image with reduced opacity
                     Positioned.fill(
                       child: Opacity(
-                        opacity: 0.5,
+                        opacity: 0.5, // Reduced opacity for better visibility in dark mode
                         child: SizedBox(
                           width: double.infinity,
                           child: Image.asset(
-                            'assets/workoutplan-banner.png', // Image path
-                            fit: BoxFit.cover, // Ensures full width without cropping
-                            alignment:
-                                Alignment.topCenter, // Aligns the image from the top
+                            'assets/workoutplan-banner.png', // Replace with your image path
+                            fit: BoxFit.cover, // Ensures the image covers the entire area
+                            alignment: Alignment.topCenter, // Aligns the image from the top
                           ),
                         ),
                       ),
@@ -603,24 +613,33 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
                             end: Alignment.bottomCenter,
                             colors: [
                               Colors.transparent, // Fully transparent at the top
-                              darkMode ? Colors.grey[900]! : Colors.transparent, // Fade to background color
+                              darkMode ? Colors.grey[900]! : Colors.white, // Fade to background color
                             ],
                           ),
                         ),
                       ),
                     ),
-                    // Foreground content: Profile + Calendar, ensuring they fill the space
+                    // Foreground content: Profile + Calendar
                     Column(
                       children: [
-                        const SizedBox(height: 55), // Adjust for status bar
-                        buildProfileSection(), // Make it take up space
-                        const SizedBox(height: 20), // Add some space between profile and calendar
-                        buildCalendar(), // Ensure calendar fills space
+                        SizedBox(height: screenHeight * 0.05), // 5% of screen height
+                        buildProfileSection(context), // Pass context for responsive sizes
                       ],
+                    ),
+                    // Calendar section overlapping the image
+                    Positioned(
+                      bottom: -screenHeight * 0.03, // Adjust to make it overlap the image
+                      left: 0,
+                      right: 0,
+                      child: SizedBox(
+                        height: screenHeight * 0.13, // Ensure the calendar has enough height
+                        child: buildCalendar(context), // Pass context for responsive sizes
+                      ),
                     ),
                   ],
                 ),
               ),
+              SizedBox(height: screenHeight * 0.02), // 2% of screen height
               buildWorkoutLevel(), // Add workout level before workout cards
               Expanded(
                 child: StreamBuilder<QuerySnapshot>(
@@ -633,48 +652,28 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
                       return const Center(child: CircularProgressIndicator());
                     }
                     if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                      // Check if the selected date meets the conditions
-                      final now = DateTime.now();
-                      final isWithinOneWeek = selectedDate.isAfter(now) && selectedDate.difference(now).inDays <= 7;
-
-                      if (isWithinOneWeek) {
-                        return Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                "No workout plans found",
-                                style: TextStyle(
-                                  color: darkMode ? Colors.white : Colors.black,
-                                ),
+                      return Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Text(
+                              "No workout plans available for the selected date",
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: darkMode ? Colors.white : Colors.black,
                               ),
-                              const SizedBox(height: 20),
-                              buildWorkoutPlanGenerateButton("Generate a workout plan", "true"),
-                              const SizedBox(height: 60),
-                            ],
-                          ),
-                        );
-                      } else {
-                        return Center(
-                          child: Text(
-                            "No workout plans available for the selected date",
-                            style: TextStyle(
-                              color: darkMode ? Colors.white : Colors.black,
                             ),
-                          ),
-                        );
-                      }
+                          ],
+                        ),
+                      );
                     }
 
                     return ListView(
                       padding: const EdgeInsets.symmetric(horizontal: 10),
-                      children: [
-                        ...snapshot.data!.docs.map((doc) {
-                          return buildWorkoutPlanCard(
-                              doc.data() as Map<String, dynamic>);
-                        }),
-                        const SizedBox(height: 100), // Add some space at the end
-                      ],
+                      children: snapshot.data!.docs.map((doc) {
+                        return buildWorkoutPlanCard(doc.data() as Map<String, dynamic>);
+                      }).toList(),
                     );
                   },
                 ),

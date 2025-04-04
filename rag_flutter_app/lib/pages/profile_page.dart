@@ -87,6 +87,7 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _chooseProfileImage() async {
+    final double screenWidth = MediaQuery.of(context).size.width;
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -106,7 +107,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     Navigator.of(context).pop();
                   },
                   child: CircleAvatar(
-                    radius: 40,
+                    radius: screenWidth * 0.1, // 10% of screen width
                     backgroundImage: AssetImage(imagePath),
                   ),
                 );
@@ -152,9 +153,11 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-
   @override
   Widget build(BuildContext context) {
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final double screenHeight = MediaQuery.of(context).size.height;
+
     return ValueListenableBuilder<bool>(
       valueListenable: isDarkMode,
       builder: (context, darkMode, child) {
@@ -166,14 +169,14 @@ class _ProfilePageState extends State<ProfilePage> {
             iconTheme: IconThemeData(color: darkMode ? Colors.grey : Colors.black),
             titleTextStyle: TextStyle(
               color: darkMode ? Colors.white : Colors.black,
-              fontSize: 20,
+              fontSize: screenWidth * 0.05, // 5% of screen width
               fontWeight: FontWeight.w400,
             ),
           ),
           body: _isLoading
               ? Center(child: CircularProgressIndicator())
               : Padding(
-                  padding: EdgeInsets.all(16.0),
+                  padding: EdgeInsets.all(screenWidth * 0.04), // 4% of screen width
                   child: Form(
                     key: _formKey,
                     child: SingleChildScrollView(
@@ -185,7 +188,7 @@ class _ProfilePageState extends State<ProfilePage> {
                             child: Stack(
                               children: [
                                 CircleAvatar(
-                                  radius: 80,
+                                  radius: screenWidth * 0.2, // 20% of screen width
                                   backgroundImage: _profileImageUrl != null
                                       ? AssetImage(_profileImageUrl!)
                                       : AssetImage("assets/default_profile.png"),
@@ -196,20 +199,20 @@ class _ProfilePageState extends State<ProfilePage> {
                                   child: GestureDetector(
                                     onTap: _chooseProfileImage,
                                     child: CircleAvatar(
-                                      radius: 18,
+                                      radius: screenWidth * 0.05, // 5% of screen width
                                       backgroundColor: darkMode ? Colors.grey[700] : Colors.teal,
-                                      child: Icon(Icons.edit, color: Colors.white),
+                                      child: Icon(Icons.edit, color: Colors.white, size: screenWidth * 0.05), // 5% of screen width
                                     ),
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                          SizedBox(height: 60),
+                          SizedBox(height: screenHeight * 0.05), // 5% of screen height
 
                           // Name Field
                           _buildTextField(_nameController, 'Name', Icons.person, darkMode),
-                          SizedBox(height: 20),
+                          SizedBox(height: screenHeight * 0.02), // 2% of screen height
 
                           // Gender Dropdown
                           DropdownButtonFormField<String>(
@@ -217,11 +220,11 @@ class _ProfilePageState extends State<ProfilePage> {
                             decoration: InputDecoration(
                               labelText: 'Gender',
                               labelStyle: TextStyle(
-                                fontSize: 14,
+                                fontSize: screenWidth * 0.04, // 4% of screen width
                                 color: darkMode ? Colors.white70 : Colors.black,
                               ),
                               border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(24),
+                                borderRadius: BorderRadius.circular(screenWidth * 0.06), // 6% of screen width
                                 borderSide: BorderSide(
                                   color: darkMode ? Colors.white24 : Colors.grey,
                                 ),
@@ -245,11 +248,11 @@ class _ProfilePageState extends State<ProfilePage> {
                             },
                             validator: (value) => value == null ? 'Please select your gender' : null,
                           ),
-                          SizedBox(height: 20),
+                          SizedBox(height: screenHeight * 0.02), // 2% of screen height
 
                           // Age Field
                           _buildTextField(_ageController, 'Age', Icons.calendar_today, darkMode, isNumber: true),
-                          SizedBox(height: 20),
+                          SizedBox(height: screenHeight * 0.02), // 2% of screen height
 
                           // Weight & Height Fields
                           Row(
@@ -257,13 +260,13 @@ class _ProfilePageState extends State<ProfilePage> {
                               Expanded(
                                 child: _buildTextField(_weightController, 'Weight (kg)', Icons.monitor_weight, darkMode, isNumber: true),
                               ),
-                              SizedBox(width: 10),
+                              SizedBox(width: screenWidth * 0.02), // 2% of screen width
                               Expanded(
                                 child: _buildTextField(_heightController, 'Height (cm)', Icons.height, darkMode, isNumber: true),
                               ),
                             ],
                           ),
-                          SizedBox(height: 100),
+                          SizedBox(height: screenHeight * 0.05), // 5% of screen height
 
                           // Save Button
                           _isSubmitting
@@ -273,15 +276,15 @@ class _ProfilePageState extends State<ProfilePage> {
                                   style: ElevatedButton.styleFrom(
                                     foregroundColor: Colors.white,
                                     backgroundColor: darkMode ? Colors.grey[700] : Colors.teal,
-                                    fixedSize: Size(314, 48),
+                                    fixedSize: Size(screenWidth * 0.8, screenHeight * 0.07), // 80% of screen width, 6% of screen height
                                     shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(24),
+                                      borderRadius: BorderRadius.circular(50), // 6% of screen width
                                     ),
                                   ),
                                   child: Text(
                                     'Save',
                                     style: TextStyle(
-                                      fontSize: 18,
+                                      fontSize: screenWidth * 0.045, // 4.5% of screen width
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),

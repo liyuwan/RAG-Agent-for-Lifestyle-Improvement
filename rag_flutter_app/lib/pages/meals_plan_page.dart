@@ -89,6 +89,7 @@ class _MealsPlanPageState extends State<MealsPlanPage> {
   void onDateSelected(DateTime date) {
     setState(() {
       selectedDate = date;
+      _totalCalories = 0; // Reset total calories when the date changes
     });
     _fetchUserData(); // Fetch the calories consumed data for the selected date
   }
@@ -104,9 +105,11 @@ class _MealsPlanPageState extends State<MealsPlanPage> {
     return total;
   }
 
-  Widget buildProfileSection() {
+  Widget buildProfileSection(BuildContext context) {
+    final double screenWidth = MediaQuery.of(context).size.width;
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 35),
+      padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.08), // 8% of screen width
       child: Row(
         children: [
           FutureBuilder<DocumentSnapshot>(
@@ -117,21 +120,21 @@ class _MealsPlanPageState extends State<MealsPlanPage> {
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return CircleAvatar(
-                  radius: 20,
+                  radius: screenWidth * 0.05, // 8% of screen width
                   backgroundColor: Colors.teal[50],
                   child: CircularProgressIndicator(color: Colors.teal),
                 );
               }
               if (snapshot.hasError || !snapshot.hasData || !snapshot.data!.exists) {
                 return CircleAvatar(
-                  radius: 20,
+                  radius: screenWidth * 0.05, // 8% of screen width
                   backgroundColor: Colors.teal[50],
                   backgroundImage: AssetImage("assets/default_profile.png"),
                 );
               }
               String? profileImageUrl = snapshot.data!['profileImage'];
               return CircleAvatar(
-                radius: 20,
+                radius: screenWidth * 0.05, // 8% of screen width
                 backgroundColor: Colors.teal[50],
                 backgroundImage: profileImageUrl != null && profileImageUrl.isNotEmpty
                     ? AssetImage(profileImageUrl)
@@ -139,11 +142,11 @@ class _MealsPlanPageState extends State<MealsPlanPage> {
               );
             },
           ),
-          SizedBox(width: 15),
+          SizedBox(width: screenWidth * 0.03), // 4% of screen width
           Text(
             "Welcome back,\n$username", // Display the username here
             style: TextStyle(
-              fontSize: 14,
+              fontSize: screenWidth * 0.035, // 4% of screen width
               fontWeight: FontWeight.w600,
               color: isDarkMode.value ? Colors.white : Colors.black,
             ),
@@ -155,7 +158,9 @@ class _MealsPlanPageState extends State<MealsPlanPage> {
     );
   }
 
-  Widget buildCalendar() {
+  Widget buildCalendar(BuildContext context) {
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final double screenHeight = MediaQuery.of(context).size.height;
     // Calculate the first and last day of the current month
     DateTime now = DateTime.now();
     DateTime firstDayOfCurrentMonth = DateTime(now.year, now.month, 1);
@@ -173,84 +178,86 @@ class _MealsPlanPageState extends State<MealsPlanPage> {
         ? selectedDate.day - 1
         : lastDayOfCurrentMonth.day + selectedDate.day - 1;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 30),
-          child: SizedBox(
-            height: 90, // Increased height to accommodate the month text
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: totalDays,
-              controller: ScrollController(
-                initialScrollOffset: (todayIndex * 50).toDouble() - MediaQuery.of(context).size.width / 2 + 25,
-              ),
-              itemBuilder: (context, index) {
-                DateTime date;
-                if (index < lastDayOfCurrentMonth.day) {
-                  date = firstDayOfCurrentMonth.add(Duration(days: index));
-                } else {
-                  date = firstDayOfNextMonth.add(Duration(days: index - lastDayOfCurrentMonth.day));
-                }
-
-                bool isSelected = date.day == selectedDate.day && date.month == selectedDate.month && date.year == selectedDate.year;
-                bool isToday = date.day == DateTime.now().day && date.month == DateTime.now().month && date.year == DateTime.now().year;
-
-                return GestureDetector(
-                  onTap: () => onDateSelected(date),
-                  child: Container(
-                    width: 60,
-                    margin: const EdgeInsets.symmetric(horizontal: 4),
-                    decoration: BoxDecoration(
-                      color: isSelected ? (isDarkMode.value ? Colors.white30 : Colors.white) : Colors.transparent,
-                      borderRadius: BorderRadius.circular(28), // Increased border radius
-                    ),
-                    alignment: Alignment.center,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          DateFormat.MMM().format(date), // Short month name
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: isSelected ? (isDarkMode.value ? Colors.tealAccent : Colors.teal) : (isToday ? Colors.deepOrange[300] : (isDarkMode.value ? Colors.grey : Colors.black)),
-                          ),
-                        ),
-                        Text(
-                          "${date.day}",
-                          style: TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w600,
-                            color: isSelected ?  (isDarkMode.value ? Colors.tealAccent : Colors.teal) : (isToday ? Colors.deepOrange[400] : (isDarkMode.value ? Colors.grey : Colors.black)),
-                          ),
-                        ),
-                        Text(
-                          DateFormat.E().format(date), // Short day name
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: isSelected ?  (isDarkMode.value ? Colors.tealAccent : Colors.teal) : (isToday ? Colors.deepOrange[300] : (isDarkMode.value ? Colors.grey : Colors.black)),
-                          ),
-                        ),
-                        if (isSelected)
-                          Container(
-                            margin: const EdgeInsets.only(top: 4),
-                            width: 6,
-                            height: 6,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.teal[200],
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.06), // 8% of screen width
+      child: SizedBox(
+        height: screenHeight * 0.11, // 12% of screen height
+        child: ListView.builder(
+          scrollDirection: Axis.horizontal,
+          itemCount: totalDays,
+          controller: ScrollController(
+            initialScrollOffset: (todayIndex * screenWidth * 0.12) - screenWidth / 2 + screenWidth * 0.06,
           ),
+          itemBuilder: (context, index) {
+            DateTime date;
+            if (index < lastDayOfCurrentMonth.day) {
+              date = firstDayOfCurrentMonth.add(Duration(days: index));
+            } else {
+              date = firstDayOfNextMonth.add(Duration(days: index - lastDayOfCurrentMonth.day));
+            }
+
+            bool isSelected = date.day == selectedDate.day && date.month == selectedDate.month && date.year == selectedDate.year;
+            bool isToday = date.day == DateTime.now().day && date.month == DateTime.now().month && date.year == DateTime.now().year;
+
+            return GestureDetector(
+              onTap: () => onDateSelected(date),
+              child: Container(
+                width: screenWidth * 0.15, // 15% of screen width
+                height: screenHeight * 0.1, // 12% of screen height
+                margin: EdgeInsets.symmetric(horizontal: screenWidth * 0.01), // 1% of screen width
+                decoration: BoxDecoration(
+                  color: isSelected ? (isDarkMode.value ? Colors.white30 : Colors.white) : Colors.transparent,
+                  borderRadius: BorderRadius.circular(screenWidth * 0.07), // 7% of screen width
+                ),
+                alignment: Alignment.center,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      DateFormat.MMM().format(date), // Short month name
+                      style: TextStyle(
+                        fontSize: screenWidth * 0.03, // 3% of screen width
+                        color: isSelected
+                            ? (isDarkMode.value ? Colors.tealAccent : Colors.teal)
+                            : (isToday ? Colors.deepOrange[300] : (isDarkMode.value ? Colors.grey : Colors.black)),
+                      ),
+                    ),
+                    Text(
+                      "${date.day}",
+                      style: TextStyle(
+                        fontSize: screenWidth * 0.04, // 4% of screen width
+                        fontWeight: FontWeight.w600,
+                        color: isSelected
+                            ? (isDarkMode.value ? Colors.tealAccent : Colors.teal)
+                            : (isToday ? Colors.deepOrange[400] : (isDarkMode.value ? Colors.grey : Colors.black)),
+                      ),
+                    ),
+                    Text(
+                      DateFormat.E().format(date), // Short day name
+                      style: TextStyle(
+                        fontSize: screenWidth * 0.03, // 3% of screen width
+                        color: isSelected
+                            ? (isDarkMode.value ? Colors.tealAccent : Colors.teal)
+                            : (isToday ? Colors.deepOrange[300] : (isDarkMode.value ? Colors.grey : Colors.black)),
+                      ),
+                    ),
+                    if (isSelected)
+                      Container(
+                        margin: EdgeInsets.only(top: screenHeight * 0.005), // 0.5% of screen height
+                        width: screenWidth * 0.015, // 1.5% of screen width
+                        height: screenHeight * 0.015, // 1.5% of screen width
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.teal[200],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            );
+          },
         ),
-      ],
+      ),
     );
   }
 
@@ -323,6 +330,7 @@ class _MealsPlanPageState extends State<MealsPlanPage> {
         selectedDate.month == DateTime.now().month &&
         selectedDate.year == DateTime.now().year;
 
+    double screenWidth = MediaQuery.of(context).size.width;
     return StatefulBuilder(
       builder: (BuildContext context, StateSetter setState) {
         bool isCompleted = _completedMeals[title] ?? false;
@@ -345,9 +353,9 @@ class _MealsPlanPageState extends State<MealsPlanPage> {
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.center, // Center the icon vertically
                           children: [
-                            SizedBox(width: 10),
+                            SizedBox(width: screenWidth * 0.04), // 2% of screen width
                             Icon(icon, color: darkMode ? Colors.white70 : Colors.grey[700], size: 28),
-                            SizedBox(width: 25),
+                            SizedBox(width: screenWidth * 0.06), // 3% of screen width
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -445,7 +453,8 @@ class _MealsPlanPageState extends State<MealsPlanPage> {
 
   @override
   Widget build(BuildContext context) {
-    double screenHeight = MediaQuery.of(context).size.height;// Declare totalCalories here
+    double screenHeight = MediaQuery.of(context).size.height;
+    double screenWidth = MediaQuery.of(context).size.width;
     bool isCurrentDay = selectedDate.day == DateTime.now().day &&
                         selectedDate.month == DateTime.now().month &&
                         selectedDate.year == DateTime.now().year;
@@ -458,8 +467,9 @@ class _MealsPlanPageState extends State<MealsPlanPage> {
           body: Column(
             children: [
               SizedBox(
-                height: screenHeight * 0.25, // Ensuring full 25% height
+                height: screenHeight * 0.25, // 25% of screen height
                 child: Stack(
+                  clipBehavior: Clip.none, // Allow content to overflow
                   fit: StackFit.expand,
                   children: [
                     // Background image with reduced opacity
@@ -481,41 +491,53 @@ class _MealsPlanPageState extends State<MealsPlanPage> {
                       child: Container(
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
+                            begin: Alignment.topCenter, // Start from the top
+                            end: Alignment.bottomCenter, // End at the bottom
                             colors: [
                               Colors.transparent, // Fully transparent at the top
-                              darkMode ? Colors.grey[900]! : Colors.transparent, // Fade to background color
-                            ],
+                              darkMode ? Colors.grey[900]! : Colors.white, // Fade to background color
+                            ],// Start fading at 80% of the height
                           ),
                         ),
                       ),
                     ),
-                    // Foreground content: Profile + Calendar
+                    // Foreground content: Profile section
                     Column(
                       children: [
-                        const SizedBox(height: 55),
-                        buildProfileSection(),
-                        const SizedBox(height: 20),
-                        buildCalendar(),
+                        SizedBox(height: screenHeight * 0.05), // 5% of screen height
+                        buildProfileSection(context), // Pass context for responsive sizes
                       ],
+                    ),
+                    // Calendar section overlapping the image
+                    Positioned(
+                      bottom: -screenHeight * 0.03, // Adjust to make it overlap the image
+                      left: 0,
+                      right: 0,
+                      child: SizedBox(
+                        height: screenHeight * 0.13, // Ensure the calendar has enough height
+                        child: buildCalendar(context), // Pass context for responsive sizes
+                      ),
                     ),
                   ],
                 ),
               ),
-              SizedBox(height: 10),
+              SizedBox(height: screenHeight * 0.03), // 2% of screen height
+              // Total calories section
               Padding(
-                padding: EdgeInsets.symmetric(horizontal: 25),
+                padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.06), // 6% of screen width
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.start,
                   children: [
-                    Icon(Icons.local_fire_department_outlined,
-                        color: Colors.redAccent, size: 30),
-                    const SizedBox(width: 8),
+                    Icon(
+                      Icons.local_fire_department_outlined,
+                      color: Colors.redAccent,
+                      size: screenWidth * 0.08, // 8% of screen width
+                    ),
+                    SizedBox(width: screenWidth * 0.02), // 2% of screen width
                     RichText(
                       text: TextSpan(
                         style: TextStyle(
-                          fontSize: 16,
+                          fontSize: screenWidth * 0.04, // 4% of screen width
                           fontWeight: FontWeight.w600,
                           color: darkMode ? Colors.white : Colors.black,
                         ),
@@ -542,12 +564,12 @@ class _MealsPlanPageState extends State<MealsPlanPage> {
                       return Center(child: CircularProgressIndicator());
                     }
                     if (snapshot.hasError || !snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                      // Check if the selected date meets the conditions
+                      // Handle no meal plans found
                       final now = DateTime.now();
                       final isWithinOneWeek = selectedDate.isAfter(now) && selectedDate.difference(now).inDays <= 7;
                       final isCurrentDay = selectedDate.day == now.day &&
-                        selectedDate.month == now.month &&
-                        selectedDate.year == now.year;
+                          selectedDate.month == now.month &&
+                          selectedDate.year == now.year;
 
                       if (isWithinOneWeek || isCurrentDay) {
                         return Center(
@@ -568,24 +590,29 @@ class _MealsPlanPageState extends State<MealsPlanPage> {
                         );
                       } else {
                         return Center(
-                          child: Text(
-                            "No meal plans available for the selected date",
-                            style: TextStyle(
-                              color: darkMode ? Colors.white : Colors.black,
-                            ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Text(
+                                "No meal plans available for the selected date",
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: darkMode ? Colors.white : Colors.black,
+                                ),
+                              ),
+                            ],
                           ),
                         );
                       }
                     }
                     try {
-                      final mealPlan =
-                          snapshot.data!.docs.first.data() as Map<String, dynamic>;
+                      final mealPlan = snapshot.data!.docs.first.data() as Map<String, dynamic>;
                       final rawContent = mealPlan['content'];
-                      final content = rawContent is String
-                          ? jsonDecode(rawContent)
-                          : rawContent;
+                      final content = rawContent is String ? jsonDecode(rawContent) : rawContent;
                       final int calculatedCalories = _calculateTotalCalories(content);
 
+                      // Update _totalCalories if it has changed
                       if (_totalCalories != calculatedCalories) {
                         WidgetsBinding.instance.addPostFrameCallback((_) {
                           setState(() {
@@ -593,6 +620,7 @@ class _MealsPlanPageState extends State<MealsPlanPage> {
                           });
                         });
                       }
+
                       return ListView(
                         padding: EdgeInsets.all(10),
                         children: [
@@ -606,12 +634,9 @@ class _MealsPlanPageState extends State<MealsPlanPage> {
                                 ],
                               ),
                             ),
-                          _buildMealCard("Breakfast", content['breakfast'],
-                              Icons.free_breakfast_outlined),
-                          _buildMealCard(
-                              "Lunch", content['lunch'], Icons.lunch_dining_outlined),
-                          _buildMealCard(
-                              "Dinner", content['dinner'], Icons.dinner_dining_outlined),
+                          _buildMealCard("Breakfast", content['breakfast'], Icons.free_breakfast_outlined),
+                          _buildMealCard("Lunch", content['lunch'], Icons.lunch_dining_outlined),
+                          _buildMealCard("Dinner", content['dinner'], Icons.dinner_dining_outlined),
                           const SizedBox(height: 100),
                         ],
                       );

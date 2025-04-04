@@ -30,33 +30,43 @@ class _MainPageState extends State<MainPage> {
 
   // This builds a custom "floating" bottom nav bar.
   Widget _buildFloatingNavBar() {
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final double screenHeight = MediaQuery.of(context).size.height;
+
     return ValueListenableBuilder<bool>(
       valueListenable: isDarkMode,
       builder: (context, darkMode, child) {
         return Align(
           alignment: Alignment.bottomCenter,
           child: Container(
-            margin: const EdgeInsets.only(bottom: 10, left: 45, right: 45),
+            margin: EdgeInsets.only(
+              bottom: screenHeight * 0.02, // 2% of screen height
+              left: screenWidth * 0.1, // 10% of screen width
+              right: screenWidth * 0.1, // 10% of screen width
+            ),
             decoration: BoxDecoration(
               color: darkMode ? Colors.grey[800] : const Color(0xFF008080),
-              borderRadius: BorderRadius.circular(40),
-              boxShadow: const [
+              borderRadius: BorderRadius.circular(screenWidth * 0.1), // 10% of screen width
+              boxShadow: [
                 BoxShadow(
                   color: Colors.black26,
-                  blurRadius: 10,
-                  spreadRadius: 2,
+                  blurRadius: screenWidth * 0.03, // 3% of screen width
+                  spreadRadius: screenWidth * 0.005, // 0.5% of screen width
                 ),
               ],
             ),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 11),
+              padding: EdgeInsets.symmetric(
+                horizontal: screenWidth * 0.015, // 2% of screen width
+                vertical: screenHeight * 0.01, // 1.5% of screen height
+              ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  _buildNavItem(Icons.restaurant, 0, darkMode),
-                  _buildNavItemWithImage('assets/dumbell.png', 1, darkMode),
-                  _buildNavItem(Icons.bar_chart, 2, darkMode),
-                  _buildNavItem(Icons.chat_bubble_outline_rounded, 3, darkMode),
+                  _buildNavItem(Icons.restaurant, 0, darkMode, screenWidth, screenHeight),
+                  _buildNavItemWithImage('assets/dumbell.png', 1, darkMode, screenWidth, screenHeight),
+                  _buildNavItem(Icons.bar_chart, 2, darkMode, screenWidth, screenHeight),
+                  _buildNavItem(Icons.chat_bubble_outline_rounded, 3, darkMode, screenWidth, screenHeight),
                 ],
               ),
             ),
@@ -66,7 +76,7 @@ class _MainPageState extends State<MainPage> {
     );
   }
 
-  Widget _buildNavItem(IconData icon, int index, bool darkMode) {
+  Widget _buildNavItem(IconData icon, int index, bool darkMode, double screenWidth, double screenHeight) {
     return GestureDetector(
       onTap: () {
         if (index == 3) {
@@ -80,13 +90,13 @@ class _MainPageState extends State<MainPage> {
         }
       },
       child: CircleAvatar(
-        radius: 28,
+        radius: screenWidth * 0.07, // 7% of screen width
         backgroundColor: _selectedIndex == index
             ? Colors.white
             : (darkMode ? Colors.grey[700] : const Color(0xFF81C0C0)),
         child: Icon(
           icon,
-          size: 30,
+          size: screenWidth * 0.08, // 8% of screen width
           color: _selectedIndex == index
               ? (darkMode ? Colors.black : const Color(0xFF008080))
               : (darkMode ? Colors.white70 : const Color(0xFF008080)),
@@ -95,13 +105,13 @@ class _MainPageState extends State<MainPage> {
     );
   }
 
-  Widget _buildNavItemWithImage(String imagePath, int index, bool darkMode) {
+  Widget _buildNavItemWithImage(String imagePath, int index, bool darkMode, double screenWidth, double screenHeight) {
     return GestureDetector(
       onTap: () {
         _onItemTapped(index);
       },
       child: CircleAvatar(
-        radius: 28,
+        radius: screenWidth * 0.07, // 7% of screen width
         backgroundColor: _selectedIndex == index
             ? Colors.white
             : (darkMode ? Colors.grey[700] : const Color(0xFF81C0C0)),
@@ -109,8 +119,8 @@ class _MainPageState extends State<MainPage> {
           angle: 3.14 / 2, // Rotate 90 degrees (π/2 radians)
           child: Image.asset(
             imagePath,
-            width: 30,
-            height: 30,
+            width: screenWidth * 0.08, // 8% of screen width
+            height: screenWidth * 0.08, // 8% of screen width
             color: _selectedIndex == index
                 ? (darkMode ? Colors.black : const Color(0xFF008080))
                 : (darkMode ? Colors.white70 : const Color(0xFF008080)),
