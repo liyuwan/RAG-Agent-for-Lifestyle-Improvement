@@ -5,7 +5,6 @@ from datetime import date
 import firebase_admin
 from firebase_admin import credentials, firestore
 import google.generativeai as genai
-from pygame import mixer
 
 # ---------------------- Environment & Firebase Setup ----------------------
 today = str(date.today())
@@ -18,9 +17,6 @@ genai.configure(api_key=api_key)
 cred = credentials.Certificate("serviceAccountKey.json")
 firebase_admin.initialize_app(cred)
 db = firestore.client()
-
-# Initialize audio mixer
-mixer.init()
 
 # ---------------------- Constants ----------------------
 PERSIST_DIRECTORY = 'db'

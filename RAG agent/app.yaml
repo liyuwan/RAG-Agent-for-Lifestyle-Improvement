@@ -1,4 +1,4 @@
-runtime: python39  # Specify the Python version
+runtime: python312  # Specify the Python version
 entrypoint: gunicorn -b :$PORT app:app  # Use Gunicorn to serve Flask
 
 env_variables:

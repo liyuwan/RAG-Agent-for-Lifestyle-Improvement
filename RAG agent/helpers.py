@@ -2,58 +2,12 @@
 import json
 import re
 from io import BytesIO
-from pygame import mixer
-from gtts import gTTS
-import speech_recognition as sr
 from firebase_admin import firestore
 from config import db
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 from google.api_core.exceptions import ResourceExhausted
 from llm_setup import llm
 
-def speak_text(text):
-    try:
-        cleaned_text = text.replace('\n', ' ').strip()
-        if len(cleaned_text) > 200:
-            chunks = [cleaned_text[i:i+200] for i in range(0, len(cleaned_text), 200)]
-            for chunk in chunks:
-                tts = gTTS(text=chunk, lang='en')
-                with BytesIO() as mp3_file:
-                    tts.write_to_fp(mp3_file)
-                    mp3_file.seek(0)
-                    mixer.music.load(mp3_file)
-                    mixer.music.play()
-                    while mixer.music.get_busy():
-                        pass
-        else:
-            tts = gTTS(text=cleaned_text, lang='en')
-            with BytesIO() as mp3_file:
-                tts.write_to_fp(mp3_file)
-                mp3_file.seek(0)
-                mixer.music.load(mp3_file)
-                mixer.music.play()
-                while mixer.music.get_busy():
-                    pass
-    except Exception as e:
-        print(f"Error speaking text: {e}")
-
-def listen_for_audio():
-    recognizer = sr.Recognizer()
-    mic = sr.Microphone()
-    recognizer.dynamic_energy_threshold = False
-    recognizer.energy_threshold = 400
-
-    with mic as source:
-        recognizer.adjust_for_ambient_noise(source, duration=0.5)
-        print("Listening for your query...")
-        audio = recognizer.listen(source, timeout=30, phrase_time_limit=30)
-    
-    try:
-        request = recognizer.recognize_google(audio, language="en-EN")
-        return request
-    except Exception as e:
-        print("Error recognizing speech:", e)
-        return None
 
 def save_plan_to_firestore(user_id, plan_type, plan_content, target_date):
     plan_data = json.loads(plan_content)
