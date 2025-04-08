@@ -14,7 +14,15 @@ load_dotenv(dotenv_path)
 api_key = os.environ.get("GOOGLE_API_KEY")
 genai.configure(api_key=api_key)
 
-cred = credentials.Certificate("serviceAccountKey.json")
+# Check if running on Render (secret file exists at this path)
+render_path = "/etc/secrets/serviceAccountKey.json"
+local_path = "serviceAccountKey.json"
+
+if os.path.exists(render_path):
+    cred = credentials.Certificate(render_path)
+else:
+    cred = credentials.Certificate(local_path)
+
 firebase_admin.initialize_app(cred)
 db = firestore.client()
 
